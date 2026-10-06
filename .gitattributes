@@ -1,0 +1,7 @@
+# >>> template:base
+* text=auto eol=lf
+
+*.png  binary
+*.jpg  binary
+*.zip  binary
+# <<< template:base

@@ -1,0 +1,6 @@
+max_retries = 2
+timeout = 20
+accept = ["200..=299", "429"]
+exclude = [
+  "^https://github\\.com/studiobimo/",
+]

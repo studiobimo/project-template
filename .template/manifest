@@ -1,0 +1,34 @@
+# What studiobimo/project-template keeps in step across every project.
+# Read by .devtools/scripts/template-sync.sh, from the template's copy.
+#
+#   file  <path>          the whole file is the template's; sync overwrites it
+#   block <path> <name>   only the region between the `>>> template:<name>` and
+#                         `<<< template:<name>` marker lines; the rest of the file
+#                         is the project's
+#
+# Anything not listed is seeded once and then belongs to the project. A project opts
+# out of an entry by listing its path in .template-ignore, with a comment saying why.
+#
+# Nothing listed here may contain the init placeholders (Project Name, project-slug):
+# init.sh would rewrite them and the new project would be born drifted.
+
+file  .devtools/base.mk
+file  .devtools/.python-version
+file  .devtools/scripts/agent-guard.sh
+file  .devtools/scripts/template-sync.sh
+file  .codex/config.toml
+file  .codex/hooks.json
+file  CLAUDE.md
+file  LICENSE
+file  lychee.toml
+file  .markdownlint-cli2.yaml
+file  .github/zizmor.yml
+file  .github/workflows/pr-checks.yml
+file  .github/workflows/template-drift.yml
+
+block .gitignore              base
+block .gitattributes          base
+block .editorconfig           base
+block .github/dependabot.yml  base
+block AGENTS.md               rules
+block CONTRIBUTING.md         workflow

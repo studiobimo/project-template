@@ -1,0 +1,9 @@
+[files]
+extend-exclude = [
+  "*.lock",
+  "*.png",
+]
+
+[default.extend-words]
+# Python CA bundle package name
+certifi = "certifi"

@@ -1,0 +1,21 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+permissions: {}
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    permissions:
+      contents: read
+    uses: studiobimo/.github/.github/workflows/ci-pre-commit.yml@v1
+    with:
+      uv-project: .devtools

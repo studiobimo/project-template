@@ -1,0 +1,15 @@
+name: PR checks
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+permissions: {}
+
+jobs:
+  pr-checks:
+    permissions:
+      contents: read
+    uses: studiobimo/.github/.github/workflows/ci-pr.yml@v1
+    with:
+      max-files: 20

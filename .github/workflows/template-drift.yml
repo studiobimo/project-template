@@ -1,0 +1,21 @@
+name: Template drift
+
+on:
+  schedule:
+    - cron: '17 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: template-drift
+  cancel-in-progress: false
+
+jobs:
+  drift:
+    # The template has nothing to drift from.
+    if: ${{ github.repository != 'studiobimo/project-template' }}
+    permissions:
+      contents: read
+      issues: write
+    uses: studiobimo/.github/.github/workflows/ci-template-drift.yml@v1

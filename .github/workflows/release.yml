@@ -1,0 +1,26 @@
+name: Release
+
+#   push to main            -> release-please grooms a release pull request
+#   merge that pull request -> release-please tags it and cuts the GitHub Release
+#
+# A job that builds or publishes what was released belongs in this same workflow,
+# gated on `needs.release.outputs.release-created == 'true'`. A tag created with
+# GITHUB_TOKEN does not trigger another workflow -- GitHub suppresses that to stop
+# runaway loops -- so a separate `on: push: tags` publisher would silently never fire.
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: studiobimo/.github/.github/workflows/release-please.yml@v1

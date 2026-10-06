@@ -1,0 +1,8 @@
+# Third-party actions are hash-pinned. studiobimo's own reusable workflows ride the
+# floating v1 tag, which is how a fix there reaches this repo without a bump here.
+rules:
+  unpinned-uses:
+    config:
+      policies:
+        studiobimo/*: ref-pin
+        "*": hash-pin

@@ -1,0 +1,6 @@
+# Default owners for everything in the repo.
+* @davidmoralesz
+
+# Release and supply-chain configuration: extra care required.
+/.github/                        @davidmoralesz
+/.devtools/                      @davidmoralesz
