@@ -86,8 +86,9 @@ the template's next release, `make -C .devtools sync` in a project takes the new
 refreshes that project's own `mise.lock`. A project bumps its own tools, the ones outside the
 block, the same way.
 
-The tag of `studiobimo/.github` that the hooks pull their branch and PR-size checks from is
-pinned in the `base` block of `lefthook.yml` and bumped the same way.
+The branch and PR-size checks are not pinned this way. The hooks pull them from
+`studiobimo/.github` at its floating `v1` tag, the one the workflows are called at, and lefthook
+looks for a newer `v1` once a day.
 
 ## Changing something for every project
 

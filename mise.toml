@@ -7,11 +7,15 @@
 # change the version, run `make -C .devtools lock`, and commit this file, mise.lock and
 # .mise/locks/ together.
 
+# The markers take in the table headers on purpose: a project that gets this block from
+# a sync, with no mise.toml yet, is left with a complete file. Add tools after the end
+# marker; they are still inside [tools].
+
+# >>> template:base
 [settings]
 lockfile = true
 
 [tools]
-# >>> template:base
 node = "24.21.0"
 python = "3.14.8"
 uv = "0.12.22"
