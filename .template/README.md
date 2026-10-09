@@ -4,7 +4,7 @@ One-line project description.
 
 ## Development
 
-Requirements: [uv](https://docs.astral.sh/uv/).
+Requirements: [mise](https://mise.jdx.dev/getting-started.html).
 
 ```sh
 make -C .devtools setup      # pinned tools + git hooks

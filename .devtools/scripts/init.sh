@@ -37,7 +37,7 @@ files=()
 while IFS= read -r f; do
     [[ -f "${f}" ]] || continue
     case "${f}" in
-        .devtools/uv.lock | .devtools/scripts/init.sh | *.png | *.jpg | *.zip) continue ;;
+        mise.lock | .mise/* | .devtools/scripts/init.sh | *.png | *.jpg | *.zip) continue ;;
     esac
     files+=("${f}")
 done < <(git ls-files --cached --others --exclude-standard)

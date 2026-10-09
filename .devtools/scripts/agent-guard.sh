@@ -7,29 +7,27 @@
 #   - gh pr create / gh stack submit / git push  -> PR size limit
 #   - git checkout -b / git switch -c / git branch <name> -> Conventional Branch
 #
-# The rules themselves are the org's pre-commit hooks (studiobimo/.github), run by
-# id, so this file only decides when to ask. CI (pr-checks) remains the
+# The rules themselves are the org's lefthook jobs (studiobimo/.github), run by
+# name, so this file only decides when to ask. CI (pr-checks) remains the
 # authoritative gate; this is a guardrail.
 #
 # Managed by studiobimo/project-template; change it there.
 set -euo pipefail
 
-devtools="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
 command -v jq >/dev/null 2>&1 || exit 0
-command -v uv >/dev/null 2>&1 || exit 0
+command -v mise >/dev/null 2>&1 || exit 0
 cmd="$(jq -r '.tool_input.command // empty' 2>/dev/null || true)"
 [[ -n "${cmd}" ]] || exit 0
 
-# run_hook <rule> <hook-id> [VAR=value ...]: blocks the call when the hook fails.
+# run_hook <rule> <job> [VAR=value ...]: blocks the call when the job fails.
 run_hook() {
-    local rule="$1" id="$2" out status=0
+    local rule="$1" job="$2" out status=0
     shift 2
-    out="$(env "$@" uv --project "${devtools}" run --frozen \
-        pre-commit run "${id}" --hook-stage manual 2>&1)" || status=$?
-    # 1 is the hook saying no. Anything else is pre-commit itself failing (tools not
-    # set up yet, the hook repo unreachable), which is not a reason to stop the agent.
-    if [[ "${status}" -eq 1 ]]; then
+    # Not set up yet (no tools, or the org's config never fetched) is not a reason to
+    # stop the agent, so only a job that ran and said no blocks the call.
+    mise exec -- lefthook version >/dev/null 2>&1 || return 0
+    out="$(env "$@" mise exec -- lefthook run pre-push --job "${job}" --no-tty 2>&1)" || status=$?
+    if [[ "${status}" -ne 0 && "${out}" == *"🥊 ${job}"* ]]; then
         printf 'Blocked by agent-guard (%s):\n%s\n' "${rule}" "${out}" >&2
         exit 2
     fi
@@ -78,12 +76,12 @@ elif [[ "${first_line}" =~ gh[[:space:]]+stack[[:space:]]+(init|add)[[:space:]]+
     for b in ${args}; do
         b="${b//[\"\']/}"
         [[ -z "${b}" || "${b}" == -* ]] && continue
-        run_hook "branch naming rule" conventional-branch "BRANCH_NAME=${b}"
+        run_hook "branch naming rule" branch-name "BRANCH_NAME=${b}"
     done
 fi
 
 if [[ -n "${new_branch}" ]]; then
-    run_hook "branch naming rule" conventional-branch "BRANCH_NAME=${new_branch}"
+    run_hook "branch naming rule" branch-name "BRANCH_NAME=${new_branch}"
 fi
 
 exit 0

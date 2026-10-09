@@ -4,7 +4,3 @@ extend-exclude = [
   ".mise/",
   "*.png",
 ]
-
-[default.extend-words]
-# Python CA bundle package name
-certifi = "certifi"

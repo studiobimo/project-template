@@ -16,6 +16,4 @@ jobs:
   lint:
     permissions:
       contents: read
-    uses: studiobimo/.github/.github/workflows/ci-pre-commit.yml@v1
-    with:
-      uv-project: .devtools
+    uses: studiobimo/.github/.github/workflows/ci-lint.yml@v1

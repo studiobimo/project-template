@@ -13,7 +13,7 @@
 # init.sh would rewrite them and the new project would be born drifted.
 
 file  .devtools/base.mk
-file  .devtools/.python-version
+file  .devtools/lefthook-base.yml
 file  .devtools/scripts/agent-guard.sh
 file  .devtools/scripts/template-sync.sh
 file  .devtools/scripts/github-setup.sh
@@ -31,5 +31,7 @@ block .gitignore              base
 block .gitattributes          base
 block .editorconfig           base
 block .github/dependabot.yml  base
+block mise.toml               base
+block lefthook.yml            base
 block AGENTS.md               rules
 block CONTRIBUTING.md         workflow
