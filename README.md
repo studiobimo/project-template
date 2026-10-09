@@ -1,5 +1,8 @@
 # studiobimo/project-template
 
+[![Lint](https://github.com/studiobimo/project-template/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/lint.yml)
+[![Release](https://github.com/studiobimo/project-template/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/release.yml)
+
 The starting point for a new [studiobimo](https://github.com/studiobimo) repository, whatever it
 is written in. It carries the parts every project shares and nothing about any one language:
 
