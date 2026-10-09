@@ -1,0 +1,31 @@
+# Every tool the hooks and CI run, at one version each. mise.lock records the checksums,
+# and `mise install` refuses anything that does not match it.
+#
+# Dependabot does not read this file, so versions are bumped by hand. The tools between
+# the markers are bumped in studiobimo/project-template and arrive with
+# `make -C .devtools sync`; the project's own, below them, are bumped here. Either way:
+# change the version, run `make -C .devtools lock`, and commit this file, mise.lock and
+# .mise/locks/ together.
+
+[settings]
+lockfile = true
+
+[tools]
+# >>> template:base
+node = "24.21.0"
+python = "3.14.8"
+uv = "0.12.22"
+lefthook = "2.1.16"
+actionlint = "1.7.12"
+shellcheck = "0.11.0"
+gitleaks = "8.30.1"
+zizmor = "1.30.1"
+typos = "1.50.3"
+lychee = "0.24.2"
+editorconfig-checker = "4.0.2"
+"npm:markdownlint-cli2" = "0.23.3"
+"npm:@commitlint/cli" = "21.2.3"
+"npm:@commitlint/config-conventional" = "21.2.3"
+"pipx:pre-commit-hooks" = "6.0.0"
+"pipx:check-jsonschema" = "0.38.2"
+# <<< template:base

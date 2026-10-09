@@ -1,6 +1,7 @@
 [files]
 extend-exclude = [
   "*.lock",
+  ".mise/",
   "*.png",
 ]
 
