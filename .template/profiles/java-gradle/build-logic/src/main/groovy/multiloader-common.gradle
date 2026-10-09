@@ -87,7 +87,7 @@ spotless {
     java {
         target 'src/*/java/**/*.java'
         if (externalSourcePath) {
-            targetExclude "src/main/java/${externalSourcePath}/**"
+            targetExclude("src/main/java/${externalSourcePath}/**".toString())
         }
         palantirJavaFormat(libs.findVersion('palantir-java-format').get().requiredVersion)
         removeUnusedImports()
