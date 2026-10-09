@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.2](https://github.com/studiobimo/project-template/compare/v0.3.1...v0.3.2) (2026-10-09)
+
+
+### Bug Fixes
+
+* **docs:** say a change to a managed file must be a fix or feat to ship ([#15](https://github.com/studiobimo/project-template/issues/15)) ([f8f3840](https://github.com/studiobimo/project-template/commit/f8f3840b12695d03884bf5ff03d0c4c3c7c0f758))
+
 ## [0.3.1](https://github.com/studiobimo/project-template/compare/v0.3.0...v0.3.1) (2026-10-09)
 
 
