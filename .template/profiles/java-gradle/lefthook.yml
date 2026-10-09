@@ -1,0 +1,42 @@
+# >>> template:java
+# Added to the hooks in the base block. A project's own pre-commit jobs go below the closing
+# marker, indented under `jobs:`; a job there with the same name as one here changes it.
+pre-push:
+  jobs:
+    # Compile, Error Prone and the tests, whatever the push contains.
+    - name: gradle-check
+      run: >-
+        JAVA_HOME="$(/usr/libexec/java_home -v "$(cat .java-version)" 2>/dev/null || echo "$JAVA_HOME")"
+        ./gradlew build -q
+
+pre-commit:
+  # Files Gradle writes: its lockfiles, the dependency checksums, the wrapper scripts
+  # (gradlew.bat has to keep its CRLF line endings) and the data generators' output.
+  exclude:
+    - 'gradle/verification-metadata.xml'
+    - '*gradle.lockfile'
+    - 'gradlew'
+    - '*.bat'
+    - 'common/src/generated/**'
+
+  jobs:
+    # Contains ${...} Gradle template placeholders; valid TOML only after processResources.
+    - name: toml
+      exclude:
+        - 'neoforge/src/main/resources/META-INF/neoforge.mods.toml'
+
+    - name: fabric-mod-json
+      glob: 'fabric/src/main/resources/fabric.mod.json'
+      run: >-
+        mise exec -- check-jsonschema
+        --schemafile https://json.schemastore.org/fabric.mod.json {staged_files}
+
+    # Formats the whole project, so it takes no file arguments. CI skips this job:
+    # spotlessCheck is part of the Gradle `check` that ci.yml runs.
+    - name: spotless
+      glob: '*.java'
+      stage_fixed: true
+      run: >-
+        JAVA_HOME="$(/usr/libexec/java_home -v "$(cat .java-version)" 2>/dev/null || echo "$JAVA_HOME")"
+        ./gradlew spotlessApply -q
+# <<< template:java

@@ -1,0 +1,14 @@
+plugins {
+    id 'groovy-gradle-plugin'
+}
+
+dependencies {
+    // Plugins applied by the convention scripts in src/main/groovy
+    implementation(libs.spotless.gradle)
+    implementation(libs.errorprone.gradle)
+    implementation(libs.mod.publish.gradle)
+}
+
+dependencyLocking {
+    lockAllConfigurations()
+}

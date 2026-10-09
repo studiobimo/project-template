@@ -1,0 +1,170 @@
+// Conventions shared by every subproject (common, fabric, neoforge).
+plugins {
+    id 'java-library'
+    id 'com.diffplug.spotless'
+    id 'net.ltgt.errorprone'
+}
+
+// Precompiled script plugins cannot use the type-safe accessor, so look the catalog up by name.
+def libs = versionCatalogs.named('libs')
+
+// Two values differ from one project to the next and live in gradle.properties:
+//   nullaway_package      the package NullAway enforces nullness in
+//   external_source_path  sources copied in from another repository, as a path under a source
+//                         root (dev/bimo/model); Error Prone and Spotless leave them alone.
+//                         Empty or unset when there are none.
+def nullawayPackage = findProperty('nullaway_package')
+if (!nullawayPackage) {
+    throw new GradleException('Set nullaway_package in gradle.properties (the package NullAway checks).')
+}
+def externalSourcePath = (findProperty('external_source_path') ?: '').toString()
+
+// .java-version is read by Gradle, actions/setup-java (java-version-file), jenv, mise and asdf.
+def javaVersion = rootProject.layout.projectDirectory.file('.java-version').asFile.text.trim() as int
+
+base {
+    archivesName = "${mod_id}-${project.name}"
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(javaVersion)
+    withSourcesJar()
+}
+
+dependencies {
+    compileOnly(libs.findLibrary('jspecify').get())
+    errorprone(libs.findLibrary('errorprone-core').get())
+    errorprone(libs.findLibrary('nullaway').get())
+}
+
+// Pin every resolved dependency (gradle.lockfile per project). Regenerate with
+// `make -C .devtools lock` after changing versions.
+dependencyLocking {
+    lockAllConfigurations()
+
+    // Minecraft's library manifest gates a few modules on the host OS, so the set of
+    // resolved modules differs between a developer's machine and a CI runner. Dependency
+    // locking is strict in both directions -- it fails on a locked module that did not
+    // resolve *and* on a resolved module that is not locked -- so a lockfile written on
+    // one OS can never validate on another, and a union of both would fail everywhere.
+    // Ignoring them keeps one lockfile valid on every platform.
+    //
+    // These stay pinned: gradle/verification-metadata.xml carries the sha256 of every
+    // platform's artifact, so an unexpected version has no trusted checksum and fails.
+    //
+    // Only modules that are wholly OS-gated need this. LWJGL and jtracy ship their natives
+    // as classifiers of a module that resolves everywhere, and locking ignores classifiers.
+    ignoredDependencies.addAll(
+            'ca.weblite:java-objc-bridge',          // macOS only
+            'io.netty:netty-transport-native-epoll', // Linux only
+            'io.netty:netty-transport-native-kqueue' // macOS and BSD only
+    )
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+    options.release = javaVersion
+    // -classfile: third-party jars (e.g. Guava via Minecraft) reference annotations that aren't on
+    // the classpath. Nothing we can fix, and -Werror would turn it into a build failure.
+    options.compilerArgs.addAll(['-Xlint:all,-processing,-serial,-classfile', '-Werror'])
+    options.errorprone {
+        disableWarningsInGeneratedCode = true
+        excludedPaths = externalSourcePath ? ".*/(build/generated|${externalSourcePath})/.*".toString() : '.*/build/generated/.*'
+        // Minecraft is not null-annotated; enforce nullness only in our packages.
+        option('NullAway:AnnotatedPackages', nullawayPackage.toString())
+        option('NullAway:JSpecifyMode', 'true')
+        error('NullAway')
+    }
+}
+
+// Error Prone only on production code; tests favor readability over lint strictness.
+tasks.named('compileTestJava', JavaCompile) {
+    options.errorprone.enabled = false
+    options.compilerArgs.remove('-Werror')
+}
+
+spotless {
+    java {
+        target 'src/*/java/**/*.java'
+        if (externalSourcePath) {
+            targetExclude "src/main/java/${externalSourcePath}/**"
+        }
+        palantirJavaFormat(libs.findVersion('palantir-java-format').get().requiredVersion)
+        removeUnusedImports()
+        formatAnnotations()
+    }
+}
+
+// Reproducible archives: identical inputs produce byte-identical jars, which
+// makes build provenance attestations meaningful.
+tasks.withType(AbstractArchiveTask).configureEach {
+    archiveVersion = "${project.version}+mc${minecraft_version}"
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+
+tasks.withType(Jar).configureEach {
+    from(rootProject.file('LICENSE')) {
+        rename { "${it}_${mod_id}" }
+    }
+    manifest {
+        attributes([
+                'Specification-Title'   : mod_name,
+                'Specification-Vendor'  : mod_author,
+                'Specification-Version' : project.version,
+                'Implementation-Title'  : project.name,
+                'Implementation-Version': project.version,
+                'Implementation-Vendor' : mod_author,
+                'Built-On-Minecraft'    : minecraft_version
+        ])
+    }
+}
+
+processResources {
+    var expandProps = [
+            'version'                      : project.version,
+            'group'                        : project.group,
+            'minecraft_version'            : minecraft_version,
+            'minecraft_version_range'      : minecraft_version_range,
+            'fabric_version'               : fabric_version,
+            'fabric_loader_version'        : fabric_loader_version,
+            'mod_name'                     : mod_name,
+            'mod_author'                   : mod_author,
+            'mod_id'                       : mod_id,
+            'license'                      : license,
+            'description'                  : project.description,
+            'homepage'                     : homepage,
+            'sources'                      : sources,
+            'issues'                       : issues,
+            'neoforge_version'             : neoforge_version,
+            'neoforge_loader_version_range': neoforge_loader_version_range,
+            'credits'                      : credits,
+            'java_version'                 : javaVersion
+    ]
+
+    var jsonExpandProps = expandProps.collectEntries { key, value ->
+        [(key): value instanceof String ? value.replace('\n', '\\\\n') : value]
+    }
+
+    filesMatching(['META-INF/neoforge.mods.toml']) {
+        expand expandProps
+    }
+    filesMatching(['fabric.mod.json', '*.mixins.json']) {
+        expand jsonExpandProps
+    }
+
+    inputs.properties(expandProps)
+}
+
+// Resolves every resolvable configuration so `--write-locks` captures all of them.
+tasks.register('resolveAndLockAll') {
+    group = 'dependency locking'
+    description = 'Resolves all configurations; run with --write-locks to refresh gradle.lockfile.'
+    notCompatibleWithConfigurationCache('Resolves configurations at execution time')
+    doFirst {
+        assert gradle.startParameter.writeDependencyLocks: 'Run with --write-locks'
+    }
+    doLast {
+        configurations.findAll { it.canBeResolved }.each { it.resolve() }
+    }
+}

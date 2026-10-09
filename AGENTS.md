@@ -76,7 +76,7 @@ weekly workflow reports as an issue.
 | CI behaviour (lint, PR checks, release) | `studiobimo/.github`, `.github/workflows/` | the `@v1` tag moving |
 | Branch and PR-size rules | `studiobimo/.github`, `.devtools/` | the `@v1` tag moving; lefthook refetches it daily |
 | Shared hooks and tool versions | `studiobimo/project-template` | `make -C .devtools sync` |
-| Files and blocks listed in the template's `.template/manifest` | `studiobimo/project-template` | `make -C .devtools sync` |
+| Files and blocks listed in the template's `.template/manifest`, and in the manifest of each profile in `.template-profiles` | `studiobimo/project-template` | `make -C .devtools sync` |
 
 A managed block sits between `>>> template:<name>` and `<<< template:<name>` marker lines, like
 this section. Edit outside the markers freely; inside them, change the template instead. If a

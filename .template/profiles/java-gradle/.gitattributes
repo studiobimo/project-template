@@ -1,0 +1,7 @@
+# >>> template:gradle
+# The wrapper scripts are stored exactly as Gradle ships them: gradlew.bat with CRLF, gradlew with
+# LF. If git converted them, the blob Dependabot commits on a wrapper bump would never match the
+# repository's, and every check that compares the tree would report gradlew.bat as changed.
+*.bat    -text
+gradlew  text eol=lf
+# <<< template:gradle

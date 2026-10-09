@@ -90,6 +90,45 @@ expect 0 "sync survives replacing itself" .devtools/scripts/template-sync.sh --f
 expect 0 "and is in step afterwards" .devtools/scripts/template-sync.sh --check --from "${newer}" --ref v9.9.9
 expect 0 "back on the released script" "${sync[@]}"
 
+# Profiles: a second manifest, read from its own directory, switched on by .template-profiles.
+rm -f .template-ignore
+expect 0 "back in step before the profile cases" "${sync[@]}"
+prof="${work}/prof"
+cp -R "${src}" "${prof}"
+mkdir -p "${prof}/.template/profiles/fixture"
+printf '# a profile for the tests\nfile   fixture.txt\nblock  cfg.yml  extra\n' >"${prof}/.template/manifest.fixture"
+printf 'from the profile\n' >"${prof}/.template/profiles/fixture/fixture.txt"
+printf '# >>> template:extra\nkey: value\n# <<< template:extra\n' >"${prof}/.template/profiles/fixture/cfg.yml"
+psync=(.devtools/scripts/template-sync.sh --from "${prof}" --ref v9.9.9)
+
+expect 0 "a profile nobody opted in to is ignored" "${psync[@]}" --check
+printf '# opted in\n\nfixture\n' >.template-profiles
+expect 1 "an opted-in profile's missing file is drift" "${psync[@]}" --check
+expect 0 "sync brings in the profile's file and block" "${psync[@]}"
+expect 0 "the file is the profile's" grep -qx 'from the profile' fixture.txt
+expect 0 "the block was created" grep -qx 'key: value' cfg.yml
+expect 0 "and the copy is in step" "${psync[@]}" --check
+
+echo 'edited locally' >>fixture.txt
+expect 1 "an edited profile file is drift" "${psync[@]}" --check
+expect 0 "sync restores it" "${psync[@]}"
+sed -i.bak 's/^key: value$/key: other/' cfg.yml && rm cfg.yml.bak
+expect 1 "an edited profile block is drift" "${psync[@]}" --check
+expect 0 "sync rewrites it" "${psync[@]}"
+expect 0 "the block is the profile's again" grep -qx 'key: value' cfg.yml
+
+echo 'edited locally' >>fixture.txt
+printf '# ours\nfixture.txt\n' >.template-ignore
+expect 0 ".template-ignore exempts a path inside a profile" "${psync[@]}" --check
+rm .template-ignore
+expect 0 "sync puts it right again" "${psync[@]}"
+
+echo nope >.template-profiles
+expect 2 "a profile the template does not have is an error, not drift" "${psync[@]}" --check
+echo '../src' >.template-profiles
+expect 2 "a profile name that is not a name is an error" "${psync[@]}" --check
+rm .template-profiles fixture.txt cfg.yml
+
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
 expect 2 "an unknown flag is an error" .devtools/scripts/template-sync.sh --nope
