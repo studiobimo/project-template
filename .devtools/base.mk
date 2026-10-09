@@ -9,7 +9,7 @@ PRE_COMMIT := $(UV) run pre-commit
 export SSL_CERT_FILE ?= $(shell $(UV) run --frozen python -c 'import certifi; print(certifi.where())' 2>/dev/null)
 
 .DEFAULT_GOAL := help
-.PHONY: help setup lint scan lock-tools sync drift
+.PHONY: help setup lint scan lock-tools sync drift github
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -34,3 +34,6 @@ sync: ## Pull the files studiobimo/project-template manages (REF=<tag> for a spe
 
 drift: ## Show where this repo differs from the template, without changing anything
 	@$(CURDIR)/scripts/template-sync.sh --check $(if $(REF),--ref $(REF))
+
+github: ## Apply the org's GitHub settings and rulesets to this repo (CHECK=1 only compares; DESC=, ENVS=)
+	@DESC="$(DESC)" ENVS="$(ENVS)" $(CURDIR)/scripts/github-setup.sh $(if $(CHECK),--check) $(if $(REF),--ref $(REF))

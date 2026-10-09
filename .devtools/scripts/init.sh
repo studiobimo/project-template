@@ -5,7 +5,9 @@
 #
 # It fills in the placeholders, swaps the template's README for the starter one,
 # resets the release state, and then removes everything that only the template
-# needs -- .template/, the `template:init` regions, and this script.
+# needs -- .template/, the `template:init` regions, and this script. Last, it sets
+# up the repository on GitHub (github-setup.sh); ENVS="staging production" also
+# creates those deployment environments.
 set -euo pipefail
 
 name="${NAME:-}"
@@ -51,13 +53,23 @@ NAME="${name}" SLUG="${slug}" DESC="${desc}" perl -0pi -e '
 
 rm -- .devtools/scripts/init.sh
 
+echo "✔ ${name} (${slug}) is initialised."
+echo
+
+# The files are done either way, so a GitHub failure is reported and not fatal.
+if ! DESC="${desc}" ENVS="${ENVS:-}" .devtools/scripts/github-setup.sh; then
+    echo "✖ GitHub is not set up. Fix the above, then: make -C .devtools github" >&2
+fi
+
+# main only takes pull requests once the rulesets are on, so the first commit is one.
 cat <<MSG
-✔ ${name} (${slug}) is initialised.
 
     Next:
     make -C .devtools setup    # pinned tools + git hooks
     make -C .devtools check    # confirm everything passes
+    git switch -c chore/initialise-project
     git add -A && git commit -m "chore: initialise from project-template"
+    git push -u origin HEAD && gh pr create --fill
 
     Then fill in AGENTS.md (Project, Layout, Conventions) and README.md.
 MSG

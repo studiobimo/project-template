@@ -70,5 +70,7 @@ Never edit a version by hand. Until 1.0.0, breaking changes bump the minor versi
 
 ## Repository settings (maintainers)
 
-`main` is protected by org rulesets: PRs required, squash-only, linear history, and required
-checks `pr-checks` and `lint`.
+`main` is protected by rulesets: PRs required, squash-only, linear history, and required checks
+`pr-checks` and `lint`. They and the other repository settings are defined in `studiobimo/.github`.
+`make -C .devtools github` applies them to this repository and needs `gh` signed in as an admin;
+`make -C .devtools github CHECK=1` only shows what differs.

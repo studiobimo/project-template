@@ -1,5 +1,8 @@
 # studiobimo/project-template
 
+[![Lint](https://github.com/studiobimo/project-template/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/lint.yml)
+[![Release](https://github.com/studiobimo/project-template/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/release.yml)
+
 The starting point for a new [studiobimo](https://github.com/studiobimo) repository, whatever it
 is written in. It carries the parts every project shares and nothing about any one language:
 
@@ -22,8 +25,21 @@ make -C .devtools setup
 make -C .devtools check
 ```
 
-`init` fills in the placeholders, swaps this README for a starter one, and deletes itself and
-`.template/`. Then add the language: build files, the project's own Makefile targets and
+`init` is the first thing to run in a new copy, before anything is committed. It fills in the
+placeholders, swaps this README for a starter one, and deletes itself and `.template/`. Then it
+sets up the repository on GitHub with `gh`, which has to be signed in as an admin of it:
+
+- the description, from `DESC`, and any deployment environments named in `ENVS="staging production"`;
+- the settings every studiobimo repository shares: squash-only merges, Actions and workflow
+  permissions, secret scanning and Dependabot alerts, and the rulesets that protect `main` and
+  release tags. Those are defined once in [studiobimo/.github](https://github.com/studiobimo/.github)
+  and applied by its script, so nothing here copies them.
+
+The GitHub half can be repeated at any time: `make -C .devtools github` applies it again, and
+`make -C .devtools github CHECK=1` only shows what differs. Once the rulesets are on, `main` takes
+pull requests only, so the initialising commit goes up as one; `init` prints the commands.
+
+Then add the language: build files, the project's own Makefile targets and
 pre-commit hooks, a CI workflow, and the Project, Layout and Conventions sections of `AGENTS.md`.
 
 ## Staying in step
@@ -33,7 +49,7 @@ of three kinds, and [`.template/manifest`](.template/manifest) says which:
 
 | Kind | Examples | After day one |
 | --- | --- | --- |
-| **Managed file** | `.devtools/base.mk`, `agent-guard.sh`, `.codex/*`, `pr-checks.yml` | Identical everywhere. `sync` overwrites it. |
+| **Managed file** | `.devtools/base.mk`, `agent-guard.sh`, `github-setup.sh`, `.codex/*`, `pr-checks.yml` | Identical everywhere. `sync` overwrites it. |
 | **Managed block** | the `base` region of `.gitignore`, the rules in `AGENTS.md` | Identical between its `>>> template:<name>` and `<<< template:<name>` markers. The rest of the file is the project's. |
 | **Seeded** | `README.md`, `.devtools/Makefile`, `.pre-commit-config.yaml`, `release.yml` | The project's. Never compared. |
 

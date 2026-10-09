@@ -16,6 +16,7 @@ file  .devtools/base.mk
 file  .devtools/.python-version
 file  .devtools/scripts/agent-guard.sh
 file  .devtools/scripts/template-sync.sh
+file  .devtools/scripts/github-setup.sh
 file  .codex/config.toml
 file  .codex/hooks.json
 file  CLAUDE.md
