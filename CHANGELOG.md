@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.0](https://github.com/studiobimo/project-template/compare/v0.3.2...v0.4.0) (2026-10-09)
+
+
+### Features
+
+* **devtools:** add the java-gradle profile ([#17](https://github.com/studiobimo/project-template/issues/17)) ([b5ae8cd](https://github.com/studiobimo/project-template/commit/b5ae8cd98efd1053c8d5946511a5778f4a41ffa8))
+
 ## [0.3.2](https://github.com/studiobimo/project-template/compare/v0.3.1...v0.3.2) (2026-10-09)
 
 
