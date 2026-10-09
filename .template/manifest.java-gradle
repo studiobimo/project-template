@@ -1,0 +1,29 @@
+# The java-gradle profile: what a multiloader Minecraft mod (Fabric + NeoForge, built with
+# Gradle) keeps in step. Opt in with `java-gradle` in the project's .template-profiles.
+# Same syntax as .template/manifest, but every path is read from
+# .template/profiles/java-gradle/ rather than from the template's root.
+#
+# Per project, and not listed: gradle/libs.versions.toml, the lockfiles and
+# gradle/verification-metadata.xml, the wrapper, release.yml, and the values the
+# convention plugins read from gradle.properties (nullaway_package, external_source_path,
+# and the publishing project ids).
+#
+# Adding a profile to a project for the first time: wrap the lines it already has in
+# lefthook.yml and .github/dependabot.yml in the markers named below (in .gitattributes,
+# replace the project's `*.bat` and `gradlew` lines with the block), `include gradle.mk`
+# from .devtools/Makefile, and only then run sync. Without the markers sync appends a
+# second copy of each block.
+
+file  build-logic/build.gradle
+file  build-logic/settings.gradle
+file  build-logic/src/main/groovy/multiloader-common.gradle
+file  build-logic/src/main/groovy/multiloader-loader.gradle
+file  .devtools/gradle.mk
+file  .devtools/scripts/stray-java.sh
+file  .java-version
+file  .github/workflows/ci.yml
+file  .claude/settings.json
+
+block .gitattributes          gradle
+block .github/dependabot.yml  gradle
+block lefthook.yml            java

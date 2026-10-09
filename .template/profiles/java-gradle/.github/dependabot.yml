@@ -1,0 +1,30 @@
+  # >>> template:gradle
+  # Minecraft, Fabric and NeoForge versions are ported deliberately, so Dependabot ignores them.
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    open-pull-requests-limit: 3
+    cooldown:
+      default-days: 7
+    commit-message:
+      prefix: chore
+      include: scope
+    groups:
+      gradle-minor-patch:
+        update-types: [minor, patch]
+    ignore:
+      - dependency-name: com.mojang:minecraft
+      - dependency-name: net.fabricmc:fabric-loader
+      - dependency-name: net.fabricmc.fabric-api:*
+      - dependency-name: net.neoforged:*
+      # Must match what Minecraft and the loaders bundle:
+      - dependency-name: org.jspecify:jspecify
+      - dependency-name: net.fabricmc:sponge-mixin
+      - dependency-name: io.github.llamalad7:*
+      # Loader plugins track Minecraft versions; bump majors deliberately.
+      - dependency-name: net.fabricmc.fabric-loom
+        update-types: [version-update:semver-major]
+      - dependency-name: net.neoforged.moddev
+        update-types: [version-update:semver-major]
+  # <<< template:gradle

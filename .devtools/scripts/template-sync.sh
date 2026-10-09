@@ -13,6 +13,11 @@
 # blocks inside files the project otherwise owns. Paths listed in this repo's
 # .template-ignore are left alone.
 #
+# A project can also opt in to profiles, one per line in its .template-profiles. A
+# profile is a second manifest, .template/manifest.<name>, whose files and blocks are
+# read from .template/profiles/<name>/ instead of the template's root, so a language's
+# files do not sit in every new project.
+#
 # Exit codes: 0 in step (or synced), 1 drift found by --check, 2 anything else.
 # The template-drift workflow depends on that split, so a failure of this script is
 # never mistaken for "no drift".
@@ -39,7 +44,7 @@ while [[ $# -gt 0 ]]; do
         --check) mode=check; shift ;;
         --from) from="${2:?--from needs a directory}"; shift 2 ;;
         --ref) ref="${2:?--ref needs a tag}"; shift 2 ;;
-        -h | --help) sed -n '2,20p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h | --help) sed -n '2,25p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) die "unknown argument: $1" ;;
     esac
 done
@@ -63,8 +68,7 @@ if [[ -z "${from}" ]]; then
         || die "cannot clone ${url} at ${ref}"
 fi
 
-manifest="${from}/.template/manifest"
-[[ -f "${manifest}" ]] || die "${from} has no .template/manifest; is it the template?"
+[[ -f "${from}/.template/manifest" ]] || die "${from} has no .template/manifest; is it the template?"
 if [[ -z "${ref}" ]]; then
     ref="$(git -C "${from}" describe --tags --always 2>/dev/null || echo unknown)"
 fi
@@ -107,8 +111,12 @@ report() {
     fi
 }
 
+# Where the manifest being applied reads its files from: the template's root for the base
+# manifest, a profile's directory for a profile.
+src_root="${from}"
+
 sync_file() {
-    local path="$1" src="${from}/$1"
+    local path="$1" src="${src_root}/$1"
     [[ -f "${src}" ]] || die "manifest lists ${path}, but the template does not have it"
 
     local same=true
@@ -140,7 +148,7 @@ sync_file() {
 }
 
 sync_block() {
-    local path="$1" name="$2" src="${from}/$1"
+    local path="$1" name="$2" src="${src_root}/$1"
     [[ -f "${src}" ]] || die "manifest lists ${path}, but the template does not have it"
 
     block_of "${src}" "${name}" >"${work}/theirs"
@@ -180,20 +188,40 @@ sync_block() {
     changed=$((changed + 1))
 }
 
-while read -r kind path name _; do
-    case "${kind}" in
-        '' | '#'*) continue ;;
-    esac
-    if ignored "${path}"; then
-        echo "– ${path}: ignored by .template-ignore"
-        continue
-    fi
-    case "${kind}" in
-        file) sync_file "${path}" ;;
-        block) sync_block "${path}" "${name:?manifest: block ${path} needs a name}" ;;
-        *) die "manifest: unknown entry '${kind} ${path}'" ;;
-    esac
-done <"${manifest}"
+# apply_manifest <manifest>: sync, or check, every entry in it.
+apply_manifest() {
+    local kind path name _
+    while read -r kind path name _; do
+        case "${kind}" in
+            '' | '#'*) continue ;;
+        esac
+        if ignored "${path}"; then
+            echo "– ${path}: ignored by .template-ignore"
+            continue
+        fi
+        case "${kind}" in
+            file) sync_file "${path}" ;;
+            block) sync_block "${path}" "${name:?manifest: block ${path} needs a name}" ;;
+            *) die "manifest: unknown entry '${kind} ${path}'" ;;
+        esac
+    done <"$1"
+}
+
+apply_manifest "${from}/.template/manifest"
+
+# Profiles come after the base manifest, in the order the project lists them.
+if [[ -f .template-profiles ]]; then
+    while read -r profile _; do
+        case "${profile}" in
+            '' | '#'*) continue ;;
+        esac
+        [[ "${profile}" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die ".template-profiles: '${profile}' is not a profile name"
+        [[ -f "${from}/.template/manifest.${profile}" ]] \
+            || die ".template-profiles lists '${profile}', but the template has no .template/manifest.${profile}"
+        src_root="${from}/.template/profiles/${profile}"
+        apply_manifest "${from}/.template/manifest.${profile}"
+    done <.template-profiles
+fi
 
 recorded="$(cat .template-version 2>/dev/null || true)"
 

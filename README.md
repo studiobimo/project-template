@@ -65,6 +65,16 @@ Each project also runs `template-drift.yml` weekly. It keeps one issue labelled 
 open while anything differs, rewrites it as that changes, and closes it when the repo is back in
 step. A project that has to differ on purpose lists the path in `.template-ignore`.
 
+### Profiles
+
+Some files only make sense for one kind of project, so they are not in the template's root. A
+profile is a second manifest, `.template/manifest.<name>`, with its files under
+`.template/profiles/<name>/`. A project opts in by listing the name in a `.template-profiles`
+file, and `sync`, `drift` and the weekly check then cover it too. Today there is one,
+`java-gradle`, for the Fabric and NeoForge mods: the Gradle convention plugins, CI, the Gradle
+Makefile targets and hooks, and the Dependabot and `.gitattributes` entries that go with them.
+The manifest says what it manages and what stays per project.
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared

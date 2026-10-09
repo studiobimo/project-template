@@ -1,0 +1,98 @@
+// Conventions for loader subprojects: compile and package the common sources
+// into each loader's jar, and publish that jar when a release is tagged.
+plugins {
+    id 'multiloader-common'
+    id 'me.modmuss50.mod-publish-plugin'
+}
+
+configurations {
+    commonJava {
+        canBeResolved = true
+    }
+    commonResources {
+        canBeResolved = true
+    }
+}
+
+dependencies {
+    compileOnly(project(':common')) {
+        def loaderAttribute = Attribute.of('io.github.mcgradleconventions.loader', String)
+        attributes {
+            attribute(loaderAttribute, 'common')
+        }
+    }
+    commonJava(project(path: ':common', configuration: 'commonJava'))
+    commonResources(project(path: ':common', configuration: 'commonResources'))
+}
+
+tasks.named('compileJava', JavaCompile) {
+    dependsOn(configurations.commonJava)
+    source(configurations.commonJava)
+}
+
+processResources {
+    dependsOn(configurations.commonResources)
+    from(configurations.commonResources)
+}
+
+tasks.named('sourcesJar', Jar) {
+    dependsOn(configurations.commonJava)
+    from(configurations.commonJava)
+    dependsOn(configurations.commonResources)
+    from(configurations.commonResources)
+}
+
+// Publishing. `./gradlew publishMods` is what the release workflow runs, with RELEASE_TAG set to
+// the tag release-please just cut; without it nothing is uploaded and each platform only prints
+// what it would have sent.
+def releaseTag = providers.environmentVariable('RELEASE_TAG')
+def modJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
+
+publishMods {
+    file = modJar
+    // Both loaders publish under one project, so the version says which jar it is.
+    version = "${project.version}-${project.name}"
+    displayName = "${mod_name} ${project.version} for ${project.name == 'neoforge' ? 'NeoForge' : 'Fabric'}"
+    changelog = "See the [release notes](${sources}/releases/tag/v${project.version})."
+    type = project.version.toString().startsWith('0.') ? BETA : STABLE
+    modLoaders.add(project.name)
+    dryRun = !releaseTag.isPresent()
+
+    if (modrinth_project_id) {
+        modrinth {
+            projectId = modrinth_project_id
+            accessToken = providers.environmentVariable('MODRINTH_TOKEN')
+            minecraftVersions.add(minecraft_version)
+            if (project.name == 'fabric') {
+                requires('fabric-api')
+            }
+        }
+    }
+    if (curseforge_project_id) {
+        curseforge {
+            projectId = curseforge_project_id
+            accessToken = providers.environmentVariable('CURSEFORGE_TOKEN')
+            minecraftVersions.add(minecraft_version)
+            clientRequired = true
+            serverRequired = true
+            if (project.name == 'fabric') {
+                requires('fabric-api')
+            }
+        }
+    }
+}
+
+// release-please has already created the GitHub Release by the time this runs, and the publish
+// plugin can only create one of its own, so the jar is attached with the GitHub CLI instead.
+def attachToGithubRelease = tasks.register('attachToGithubRelease', Exec) {
+    group = 'publishing'
+    description = 'Attaches the jar to the GitHub Release named by RELEASE_TAG.'
+    inputs.file(modJar)
+    onlyIf('RELEASE_TAG is set') { releaseTag.isPresent() }
+    environment('GH_TOKEN', providers.environmentVariable('GITHUB_TOKEN').getOrElse(''))
+    commandLine('gh', 'release', 'upload', releaseTag.getOrElse(''), modJar.get().asFile.path, '--clobber')
+}
+
+tasks.named('publishMods') {
+    dependsOn(attachToGithubRelease)
+}
