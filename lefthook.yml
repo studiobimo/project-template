@@ -1,0 +1,30 @@
+# This project's git hooks. The ones every studiobimo repo shares are in
+# .devtools/lefthook-base.yml, which the template manages; add the project's own
+# below the markers, under the same hook names. A job here with the same name as one
+# there changes that job.
+#
+#   make -C .devtools setup   # install the tools and wire the hooks
+#   make -C .devtools lint    # the pre-commit hook, over every file
+
+# >>> template:base
+extends:
+  - .devtools/lefthook-base.yml
+
+# The org's own rules, from the same scripts CI runs on the pull request.
+# agent-guard.sh runs them by job name (branch-name, pr-size).
+# lefthook fetches a remote once per ref: a release tag, never the floating v1.
+remotes:
+  - git_url: https://github.com/studiobimo/.github
+    ref: v1.10.1
+    configs:
+      - lefthook/org.yml
+# <<< template:base
+
+# >>> template:init
+# The starter README's links only resolve once init moves it to the root.
+pre-push:
+  jobs:
+    - name: lychee
+      exclude:
+        - .template/README.md
+# <<< template:init

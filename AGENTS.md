@@ -18,15 +18,19 @@ built with, and where most of the code lives. Then the pointers below. -->
 
 - What it is and how to use it: `README.md`
 - Workflow and conventions in full: `CONTRIBUTING.md`
-- Commit scopes: `build`, `ci`, `docs`, `deps`, `devtools`
+- Commit scopes: `build`, `ci`, `docs`, `deps`, `devtools`. `.commitlintrc.yaml` enforces this
+  list, so add a scope in both places.
 
 ## Layout
 
 ```text
-.devtools/               Makefile (project targets), base.mk (shared targets), pinned Python tools
+.devtools/               Makefile (project targets), base.mk (shared targets), lefthook-base.yml (shared hooks)
   scripts/               agent-guard.sh, template-sync.sh, github-setup.sh, and this project's own scripts
 .github/workflows/       thin wrappers over studiobimo/.github reusable workflows
 .claude/  .codex/        agent settings and the PreToolUse hook that runs agent-guard.sh
+mise.toml  mise.lock     every tool the hooks and CI run, pinned; .mise/locks/ belongs with them
+lefthook.yml             this project's hooks, on top of the shared ones
+.commitlintrc.yaml       commit rules: commitlint's conventional config plus this project's scopes
 AGENTS.md  CLAUDE.md     this guide; CLAUDE.md only imports it
 ```
 
@@ -40,6 +44,8 @@ violation is caught before it is reviewed.
 
 - **Commits:** [Conventional Commits 1.0.0](https://www.conventionalcommits.org/en/v1.0.0/),
   `<type>(<scope>): <summary>`. PRs are squash-merged, so the **PR title** must be one too.
+  commitlint checks both against its conventional config: a lowercase summary with no full stop,
+  at most 100 characters in the header and in each body line, and a scope from the project's list.
 - **Branches:** [Conventional Branch](https://conventionalbranch.org/), `<type>/<description>`
   in lowercase with single hyphens, e.g. `feat/short-description`. Agents may use `claude/…` or
   `codex/…`.
@@ -47,9 +53,11 @@ violation is caught before it is reviewed.
   (`gh stack init`, `gh stack add`, `gh stack submit`).
 - **Versioning:** SemVer, managed by release-please. Never edit a version, a
   `.release-please-manifest.json` or a `CHANGELOG.md` by hand.
-- **Pinning:** third-party GitHub Actions and pre-commit hooks are pinned to full commit SHAs with
-  the version in a comment; studiobimo's own reusable workflows are called at `@v1`. Python tools
-  are locked in `.devtools/uv.lock`.
+- **Pinning:** third-party GitHub Actions are pinned to full commit SHAs with the version in a
+  comment; studiobimo's own reusable workflows are called at `@v1`. Every tool is pinned in
+  `mise.toml` and locked in `mise.lock`. Dependabot does not read `mise.toml`: a tool is bumped by
+  hand, then `make -C .devtools lock`, and `mise.toml`, `mise.lock` and `.mise/locks/` are
+  committed together.
 - **Workflows:** `permissions: {}` at the top, the minimum per job, `persist-credentials: false`
   on every checkout, secrets passed explicitly and never with `secrets: inherit`.
 - **Say what you tested.** State what you ran and what it showed. If something could not be
@@ -66,7 +74,8 @@ weekly workflow reports as an issue.
 | To change | Edit it in | It reaches this repo by |
 | --- | --- | --- |
 | CI behaviour (lint, PR checks, release) | `studiobimo/.github`, `.github/workflows/` | the `@v1` tag moving |
-| Commit, branch and PR-size rules | `studiobimo/.github`, `.devtools/` | a `rev:` bump in `.pre-commit-config.yaml` |
+| Branch and PR-size rules | `studiobimo/.github`, `.devtools/` | the `ref:` in `lefthook.yml` moving, with a sync |
+| Shared hooks and tool versions | `studiobimo/project-template` | `make -C .devtools sync` |
 | Files and blocks listed in the template's `.template/manifest` | `studiobimo/project-template` | `make -C .devtools sync` |
 
 A managed block sits between `>>> template:<name>` and `<<< template:<name>` marker lines, like
@@ -79,7 +88,7 @@ difference is deliberate, list the path in `.template-ignore` with a comment say
 ```sh
 make -C .devtools setup   # once: pinned tools + git hooks
 make -C .devtools check   # everything CI runs
-make -C .devtools lint    # every pre-commit hook, on every file
+make -C .devtools lint    # the pre-commit hook, on every file
 make -C .devtools lock    # after changing a pinned version
 make -C .devtools drift   # where this repo differs from the template
 make -C .devtools sync    # pull the template's managed files

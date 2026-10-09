@@ -1,0 +1,10 @@
+# Conventional Commits for this project: commitlint's conventional config, plus the
+# scopes AGENTS.md lists. A scope stays optional, but one that is not listed is
+# rejected. The commit-msg hook reads this file, and so does CI, on the pull request
+# title and on every commit.
+extends:
+  - '@commitlint/config-conventional'
+
+rules:
+  # `main` is release-please's: it titles the release pull request `chore(main): ...`.
+  scope-enum: [2, always, [build, ci, docs, deps, devtools, main]]

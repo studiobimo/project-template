@@ -1,0 +1,107 @@
+# The hooks every studiobimo repo runs. Managed by studiobimo/project-template; change
+# it there. A project's own jobs go in lefthook.yml at the root, which extends this.
+#
+#   commit-msg -> Conventional Commits, with the project's scopes (.commitlintrc.yaml)
+#   pre-commit -> the linters below; CI's `lint` job runs this hook over every file
+#   pre-push   -> link check. The branch name and PR size checks come from
+#                 studiobimo/.github, through the `remotes` entry in lefthook.yml:
+#                 lefthook only reads `remotes` from the root config.
+#
+# Every tool is pinned in mise.toml and run through `mise exec`, so a hook works
+# whether or not the shell has mise activated, and never falls back to some other
+# version that happens to be installed.
+
+commit-msg:
+  jobs:
+    - name: commitlint
+      run: mise exec -- commitlint --edit {1}
+
+pre-commit:
+  parallel: true
+  jobs:
+    # These three rewrite files, so they run one after another, never side by side.
+    - name: whitespace
+      group:
+        jobs:
+          - name: trailing-whitespace
+            file_types: text
+            stage_fixed: true
+            run: mise exec -- trailing-whitespace-fixer --markdown-linebreak-ext=md {staged_files}
+          - name: end-of-file
+            file_types: text
+            stage_fixed: true
+            run: mise exec -- end-of-file-fixer {staged_files}
+          - name: line-endings
+            file_types: text
+            stage_fixed: true
+            run: mise exec -- mixed-line-ending --fix=lf {staged_files}
+
+    - name: merge-conflict
+      file_types: text
+      run: mise exec -- check-merge-conflict {staged_files}
+
+    - name: large-files
+      run: mise exec -- check-added-large-files --maxkb=512 {staged_files}
+
+    - name: yaml
+      glob: '*.{yml,yaml}'
+      run: mise exec -- check-yaml {staged_files}
+
+    - name: json
+      glob: '*.json'
+      run: mise exec -- check-json {staged_files}
+
+    - name: toml
+      glob: '*.toml'
+      run: mise exec -- check-toml {staged_files}
+
+    - name: executables-have-shebangs
+      file_types: [text, executable]
+      run: mise exec -- check-executables-have-shebangs {staged_files}
+
+    - name: shebang-scripts-are-executable
+      file_types: text
+      run: mise exec -- check-shebang-scripts-are-executable {staged_files}
+
+    - name: gitleaks
+      run: mise exec -- gitleaks git --pre-commit --redact --staged
+
+    - name: actionlint
+      glob: '.github/workflows/*.{yml,yaml}'
+      run: mise exec -- actionlint {staged_files}
+
+    # Exit 3 is "no inputs collected": none of the files were a workflow or an action.
+    - name: zizmor
+      glob: '.github/**/*.{yml,yaml}'
+      run: mise exec -- zizmor --no-progress {staged_files} || [ "$?" -eq 3 ]
+
+    - name: github-workflows
+      glob: '.github/workflows/*.{yml,yaml}'
+      run: mise exec -- check-jsonschema --builtin-schema vendor.github-workflows {staged_files}
+
+    - name: dependabot
+      glob: '.github/dependabot.{yml,yaml}'
+      run: mise exec -- check-jsonschema --builtin-schema vendor.dependabot {staged_files}
+
+    - name: shellcheck
+      glob: '*.sh'
+      run: mise exec -- shellcheck {staged_files}
+
+    - name: markdownlint
+      glob: '*.md'
+      run: mise exec -- markdownlint-cli2 {staged_files}
+
+    # --force-exclude keeps _typos.toml's excludes in force for files named outright.
+    - name: typos
+      file_types: text
+      run: mise exec -- typos --force-exclude {staged_files}
+
+    - name: editorconfig
+      file_types: text
+      run: mise exec -- editorconfig-checker {staged_files}
+
+pre-push:
+  jobs:
+    - name: lychee
+      glob: '*.md'
+      run: mise exec -- lychee --no-progress --config lychee.toml {push_files}

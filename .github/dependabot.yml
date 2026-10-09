@@ -14,29 +14,6 @@ updates:
       actions:
         patterns: ["*"]
 
-  - package-ecosystem: pre-commit
-    directory: /
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
-    commit-message:
-      prefix: chore
-      include: scope
-    groups:
-      pre-commit-hooks:
-        patterns: ["*"]
-
-  - package-ecosystem: uv
-    directory: /.devtools
-    schedule:
-      interval: weekly
-    cooldown:
-      default-days: 7
-    commit-message:
-      prefix: chore
-      include: scope
-    groups:
-      devtools:
-        patterns: ["*"]
+  # The tools in mise.toml are not here: Dependabot does not read that file. They are
+  # bumped by hand in studiobimo/project-template and arrive with `make -C .devtools sync`.
   # <<< template:base
