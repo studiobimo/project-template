@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.3.1](https://github.com/studiobimo/project-template/compare/v0.3.0...v0.3.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **devtools:** follow v1 for the hook rules and make the mise block stand alone ([#11](https://github.com/studiobimo/project-template/issues/11)) ([cd1b01a](https://github.com/studiobimo/project-template/commit/cd1b01a3189bfe315313d538e86016c3d406c9c9))
+
 ## [0.3.0](https://github.com/studiobimo/project-template/compare/v0.2.0...v0.3.0) (2026-10-09)
 
 
