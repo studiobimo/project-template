@@ -74,7 +74,7 @@ weekly workflow reports as an issue.
 | To change | Edit it in | It reaches this repo by |
 | --- | --- | --- |
 | CI behaviour (lint, PR checks, release) | `studiobimo/.github`, `.github/workflows/` | the `@v1` tag moving |
-| Branch and PR-size rules | `studiobimo/.github`, `.devtools/` | the `ref:` in `lefthook.yml` moving, with a sync |
+| Branch and PR-size rules | `studiobimo/.github`, `.devtools/` | the `@v1` tag moving; lefthook refetches it daily |
 | Shared hooks and tool versions | `studiobimo/project-template` | `make -C .devtools sync` |
 | Files and blocks listed in the template's `.template/manifest` | `studiobimo/project-template` | `make -C .devtools sync` |
 
