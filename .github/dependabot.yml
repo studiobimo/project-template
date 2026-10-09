@@ -3,8 +3,11 @@ updates:
   # >>> template:base
   - package-ecosystem: github-actions
     directory: /
+    # Monthly: every update run, and every rebase of an open PR, is a billed Actions run
+    # on a private repository. Security updates ignore the schedule.
     schedule:
-      interval: weekly
+      interval: monthly
+    open-pull-requests-limit: 3
     cooldown:
       default-days: 7
     commit-message:
