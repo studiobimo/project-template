@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.3.0](https://github.com/studiobimo/project-template/compare/v0.2.0...v0.3.0) (2026-10-09)
+
+
+### Features
+
+* **devtools:** pin the tools with mise ([#7](https://github.com/studiobimo/project-template/issues/7)) ([4dbd1df](https://github.com/studiobimo/project-template/commit/4dbd1df47318b5c75fa9a692dfcb9f05dfd8d52e))
+* **devtools:** run the hooks with lefthook and commitlint ([#8](https://github.com/studiobimo/project-template/issues/8)) ([0918ebf](https://github.com/studiobimo/project-template/commit/0918ebf2d0b2308f0b2e922ef26ff62e357c3a1e))
+
 ## [0.2.0](https://github.com/studiobimo/project-template/compare/v0.1.0...v0.2.0) (2026-10-09)
 
 
