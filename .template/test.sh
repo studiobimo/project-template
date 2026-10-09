@@ -24,7 +24,7 @@ trap 'rm -rf "${work}"' EXIT
 export GIT_CONFIG_GLOBAL=/dev/null GIT_CONFIG_SYSTEM=/dev/null
 export GIT_AUTHOR_NAME=test GIT_AUTHOR_EMAIL=test@example.com
 export GIT_COMMITTER_NAME=test GIT_COMMITTER_EMAIL=test@example.com
-unset TEMPLATE_REPO NAME SLUG DESC
+unset TEMPLATE_REPO SETTINGS_REPO NAME SLUG DESC ENVS
 
 copy() {
     mkdir -p "$1"
@@ -94,15 +94,60 @@ expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
 expect 2 "an unknown flag is an error" .devtools/scripts/template-sync.sh --nope
 
+echo "github-setup"
+# A gh that answers from GH_REPO_JSON and records every call that would change something.
+mkdir -p "${work}/bin" "${work}/settings/.devtools"
+cat >"${work}/bin/gh" <<'GH'
+#!/usr/bin/env bash
+case "$1 $2" in
+    "repo view") [[ -n "${GH_REPO_JSON:-}" ]] && echo "${GH_REPO_JSON}" || exit 1 ;;
+    "api repos/acme/widget/environments/"*) exit 1 ;;
+    *) echo "$*" >>"${GH_LOG}" ;;
+esac
+GH
+chmod +x "${work}/bin/gh"
+# Stands in for studiobimo/.github's script, which needs the real API.
+cat >"${work}/settings/.devtools/repo-settings.sh" <<'SHARED'
+echo "shared ORG=${ORG} $*" >>"${GH_LOG}"
+SHARED
+export PATH="${work}/bin:${PATH}" GH_LOG="${work}/gh.log"
+export GH_REPO_JSON='{"nameWithOwner":"acme/widget","description":"","viewerCanAdminister":true}'
+setup=(.devtools/scripts/github-setup.sh --from "${work}/settings")
+called() { grep -qxF -- "$1" "${GH_LOG}"; }
+
+: >"${GH_LOG}"
+expect 1 "--check reports what is missing" env DESC="A widget." ENVS=staging "${setup[@]}" --check
+expect 0 "and asks the shared script only to compare" called "shared ORG=acme --check widget"
+expect 1 "and changes nothing" grep -qv '^shared ' "${GH_LOG}"
+
+: >"${GH_LOG}"
+expect 0 "applies the setup" env DESC="A widget." ENVS=staging "${setup[@]}"
+expect 0 "runs the shared settings for this repository" called "shared ORG=acme widget"
+expect 0 "sets the description" called "repo edit acme/widget --description A widget."
+expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/staging"
+
+: >"${GH_LOG}"
+expect 0 "leaves the description alone unless asked" "${setup[@]}"
+expect 1 "so nothing but the shared script ran" grep -qv '^shared ' "${GH_LOG}"
+expect 2 "refuses an environment name that is not one" env ENVS='a/b' "${setup[@]}"
+expect 2 "refuses without admin rights" \
+    env GH_REPO_JSON='{"nameWithOwner":"acme/widget","description":"","viewerCanAdminister":false}' "${setup[@]}"
+expect 2 "refuses a repository that is not on GitHub" env GH_REPO_JSON= "${setup[@]}"
+expect 2 "an unknown flag is an error" .devtools/scripts/github-setup.sh --nope
+
 echo "init"
 proj="${work}/proj"
 copy "${proj}"
 cd "${proj}"
+# No repository on GitHub from here on, so init has to finish without one.
+export GH_REPO_JSON=
 expect 1 "refuses without a name" env SLUG=my-project DESC=x .devtools/scripts/init.sh
 expect 1 "refuses a slug that is not kebab-case" \
     env NAME=x SLUG=My_Project DESC=x .devtools/scripts/init.sh
 expect 0 "initialises a project" \
     env NAME="My Project" SLUG=my-project DESC="Does one thing & does it well." .devtools/scripts/init.sh
+cp "${work}/out" "${work}/init.out"
+expect 0 "says so when GitHub could not be set up" grep -q 'GitHub is not set up' "${work}/init.out"
 expect 0 "names the project" grep -qx '# My Project' README.md
 expect 0 "keeps punctuation in the description" grep -qxF 'Does one thing & does it well.' README.md
 expect 1 "leaves no placeholder behind" \
@@ -110,6 +155,7 @@ expect 1 "leaves no placeholder behind" \
 expect 1 "leaves no init region behind" grep -rIl --exclude-dir=.git 'template:init' .
 expect 1 "removes .template/" test -e .template
 expect 1 "removes itself" test -e .devtools/scripts/init.sh
+expect 0 "keeps the GitHub setup for later runs" test -x .devtools/scripts/github-setup.sh
 expect 1 "removes the template-only make targets" grep -q '^init:\|^test:' .devtools/Makefile
 expect 1 "refuses to run twice" env NAME=x SLUG=x DESC=x "${template}/.devtools/scripts/init.sh"
 expect 0 "is born in step with the template" \

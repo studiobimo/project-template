@@ -24,7 +24,7 @@ built with, and where most of the code lives. Then the pointers below. -->
 
 ```text
 .devtools/               Makefile (project targets), base.mk (shared targets), pinned Python tools
-  scripts/               agent-guard.sh, template-sync.sh, and this project's own scripts
+  scripts/               agent-guard.sh, template-sync.sh, github-setup.sh, and this project's own scripts
 .github/workflows/       thin wrappers over studiobimo/.github reusable workflows
 .claude/  .codex/        agent settings and the PreToolUse hook that runs agent-guard.sh
 AGENTS.md  CLAUDE.md     this guide; CLAUDE.md only imports it
@@ -83,6 +83,7 @@ make -C .devtools lint    # every pre-commit hook, on every file
 make -C .devtools lock    # after changing a pinned version
 make -C .devtools drift   # where this repo differs from the template
 make -C .devtools sync    # pull the template's managed files
+make -C .devtools github  # apply the org's GitHub settings and rulesets (CHECK=1 to compare)
 make -C .devtools help    # all targets
 ```
 
