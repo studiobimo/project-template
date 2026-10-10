@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.4.1](https://github.com/studiobimo/project-template/compare/v0.4.0...v0.4.1) (2026-10-10)
+
+
+### Bug Fixes
+
+* **devtools:** pass Spotless a String for the external sources exclude ([#19](https://github.com/studiobimo/project-template/issues/19)) ([0e57686](https://github.com/studiobimo/project-template/commit/0e5768609d7a743a015656c1e963367205c0d39a))
+
 ## [0.4.0](https://github.com/studiobimo/project-template/compare/v0.3.2...v0.4.0) (2026-10-09)
 
 
