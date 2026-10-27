@@ -105,6 +105,18 @@ manages and what stays per project.
   node .devtools/scripts/gen.mjs host         # wrangler.jsonc and worker/, then the packages
   ```
 
+- **`gcp`**, the same for Google Cloud Run: one service, a Hono server on Node bundled into
+  `dist/server`, serves the client and answers `/api/*`. OpenTofu in `infra/` sets up the
+  staging and production services, their accounts and Workload Identity Federation, and a
+  deploy workflow ships `main` to staging and each release to production, with no key
+  stored anywhere:
+
+  ```sh
+  echo gcp >> .template-profiles
+  make -C .devtools sync
+  node .devtools/scripts/gen.mjs host         # server/, infra/ and the Dockerfile, then the packages
+  ```
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared

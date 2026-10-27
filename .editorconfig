@@ -23,6 +23,6 @@ indent_style = tab
 
 # >>> template:init
 # The web profiles' sources, indented as Prettier indents them in a project.
-[.template/profiles/{vite-react-tanstack,cloudflare}/**.{js,mjs,ts,tsx,css,html}]
+[.template/profiles/{vite-react-tanstack,cloudflare,gcp}/**.{js,mjs,ts,tsx,css,html}]
 indent_size = 2
 # <<< template:init

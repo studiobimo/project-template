@@ -1,0 +1,5 @@
+# >>> template:gcp
+# Inside [tools], after the vite block. OpenTofu, for infra/ and its hook. gcloud is not
+# pinned here: mise cannot lock it. Install it to deploy from a laptop; deploy.yml pins its own.
+opentofu = "1.13.1"
+# <<< template:gcp
