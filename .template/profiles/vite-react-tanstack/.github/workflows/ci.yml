@@ -1,0 +1,42 @@
+name: CI
+
+# Installs the tools mise.toml pins and the packages pnpm-lock.yaml pins, then runs
+# `make -C .devtools ci`: build, route tree, types, ESLint, Prettier, tests, bundle budget
+# and the audit. It is the target a developer runs, at the same versions, so local and CI
+# results match. Managed by studiobimo/project-template (profile vite-react-tanstack).
+#
+# Nothing here reads a secret, so it is safe on pull requests from forks. Deploying is a
+# hosting profile's job, in its own workflow.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  merge_group:
+
+permissions: {}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    # Pushing again to a pull request supersedes the run in flight, so it is cancelled rather
+    # than billed to the end. A push to main and a merge group always finish.
+    concurrency:
+      group: ci-${{ github.ref }}
+      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # With a mise.lock present the action passes --locked itself, so a tool whose
+      # checksum is not recorded fails here.
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+        with:
+          version: 2026.10.0
+
+      - name: make ci
+        run: make -C .devtools ci

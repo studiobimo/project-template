@@ -1,0 +1,5 @@
+# >>> template:vite
+# Node is in the base block. pnpm is pinned here, not by package.json's packageManager, so
+# one file holds every tool version.
+pnpm = "12.14.0"
+# <<< template:vite
