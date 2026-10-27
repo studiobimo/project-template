@@ -171,6 +171,10 @@ expect 1 "refuses a feature when any of its files is taken" gen feature invoices
 expect 1 "and writes none of them" test -f "${vite}/src/features/invoices/invoices-page.tsx"
 expect 1 "refuses an unknown generator" gen nope
 expect 1 "refuses host files without a hosting profile" gen host --no-install
+cp -R "${work}/profile-cloudflare/.devtools/host" "${vite}/.devtools/"
+expect 0 "writes the hosting profile's files" gen host --no-install
+expect 0 "naming the Worker after the project" \
+    grep -qF '"name": "profile-vite-react-tanstack"' "${vite}/wrangler.jsonc"
 
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"

@@ -93,6 +93,18 @@ manages and what stays per project.
   node .devtools/scripts/gen.mjs route '/invoices/$invoiceId'
   ```
 
+- **`cloudflare`**, a hosting profile for a `vite-react-tanstack` app: one Worker serves the
+  client and answers `/api/*` with Hono, with its tests, types, and a deploy target that
+  builds for the environment it deploys to. It manages only `.devtools/host/`, which the
+  shared configs load when it exists, so adding it, or swapping it for another host later,
+  leaves the project's own config files and `src/` alone:
+
+  ```sh
+  echo cloudflare >> .template-profiles
+  make -C .devtools sync
+  node .devtools/scripts/gen.mjs host         # wrangler.jsonc and worker/, then the packages
+  ```
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared
