@@ -16,11 +16,23 @@ there, so the project's own config files never name the host. `Dockerfile`, `.gc
   receives only the `Dockerfile` and `dist/` (`.gcloudignore`). The client is the same
   build in every environment, so a setting that differs per environment belongs on the
   server, read from `process.env`.
+- **Node is one version everywhere.** The `Dockerfile` copies Node from the official
+  image's exact tag onto distroless, and `make -C .devtools check` fails unless that tag
+  is the `node` in `mise.toml`. Bump them in one commit: a Dependabot PR for the image
+  needs the `mise.toml` bump and `make -C .devtools lock` pushed onto it.
 - **Infrastructure is OpenTofu, in `infra/`.** One GCP project per app, named in
   `infra/project.auto.tfvars.json` with the region and service name, which make reads too.
   It creates `<service>-staging` and `<service>-production`, each running as its own
   account with no roles; grant one what its service uses, in `infra/`. Environment
-  variables and secrets go on the service there too, never in the image. Change it with
+  variables and secrets go on the service there too, never in the image. Requests time
+  out after 60 seconds, production runs at most 3 instances and staging 2, and a new
+  revision gets traffic only once `/api/health` answers. A budget on the billing account
+  mails its admins as the month nears `monthly_budget`; it warns, the caps limit. Applying
+  it takes Billing Account Costs Manager, or Administrator, on that account.
+- **Public unless `members` is set.** Apps are public and staging sends
+  `X-Robots-Tag: noindex`. For an admin tool, list who may open it as `members` in
+  `infra/project.auto.tfvars.json`: Identity-Aware Proxy then signs people in with Google
+  and lets only them through, on both services. Change it with
   `make -C .devtools infra-plan` and `infra-apply`; the state is in a GCS bucket that
   `infra-bootstrap` creates once. Commit `infra/.terraform.lock.hcl`, which pins the
   provider; bump it by hand with `tofu init -upgrade`, a week after its release.

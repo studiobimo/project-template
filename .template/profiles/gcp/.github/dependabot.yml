@@ -1,11 +1,16 @@
   # >>> template:gcp
-  # The Dockerfile's base image, pinned by digest. The OpenTofu provider is bumped by hand,
-  # like the tools in mise.toml: Dependabot's terraform updater reads Terraform's registry.
+  # The Dockerfile's images, pinned by digest. A new Node tag fails make check until
+  # mise.toml's node moves with it, in the same PR; a new major is a deliberate change.
+  # The OpenTofu provider is bumped by hand, like the tools in mise.toml: Dependabot's
+  # terraform updater reads Terraform's registry.
   - package-ecosystem: docker
     directory: /
     schedule:
       interval: monthly
     open-pull-requests-limit: 2
+    ignore:
+      - dependency-name: node
+        update-types: [version-update:semver-major]
     cooldown:
       default-days: 7
     commit-message:

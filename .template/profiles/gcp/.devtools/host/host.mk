@@ -13,16 +13,24 @@ TOFU := cd $(ROOT)/infra && $(MISE) exec -- tofu
 # read when a recipe runs rather than every time make starts.
 setting = $$(cd $(ROOT) && $(MISE) exec -- node -p "require('./infra/project.auto.tfvars.json').$(1)")
 
-.PHONY: build-server start deploy infra-fmt infra-fmt-check infra-bootstrap infra-plan infra-apply infra-github
+.PHONY: build-server start deploy node-image-check infra-fmt infra-fmt-check infra-bootstrap infra-plan infra-apply infra-github
 
 build: build-server
-ci: infra-fmt-check
+ci: node-image-check infra-fmt-check
 
 build-server: ## Bundle server/index.ts and what it imports into dist/server/index.mjs
 	$(PNPM) exec vite build --config .devtools/host/server.ts
 
 start: build ## Run the production build as Cloud Run runs it, on PORT or 8080
 	cd $(ROOT) && $(MISE) exec -- node --enable-source-maps dist/server/index.mjs
+
+# The image copies Node from the official image's exact tag; mise.toml pins the Node that
+# builds and tests the app. They change together, so production runs what was tested.
+node-image-check: ## Fail when the Dockerfile's Node is not the one mise.toml pins
+	@want="$$(cd $(ROOT) && $(MISE) exec -- node -p process.versions.node)"; \
+		have="$$(sed -n 's/^FROM node:\([0-9][0-9.]*\)-.*/\1/p' $(ROOT)/Dockerfile)"; \
+		[ "$${have}" = "$${want}" ] || { echo "✖ the Dockerfile copies Node $${have:-(no FROM node:<version>-…)}, \
+	but mise.toml pins $${want}: change both in one commit" >&2; exit 1; }
 
 # The image is built by Cloud Build from the Dockerfile and dist/ alone (.gcloudignore), so
 # the build here is what ships. The client is the same build in every environment: what

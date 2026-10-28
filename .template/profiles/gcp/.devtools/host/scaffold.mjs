@@ -7,7 +7,7 @@ export default ({ slug }) => ({
   dependencies: ['hono', '@hono/node-server'],
   devDependencies: [],
   next: [
-    'edit infra/project.auto.tfvars.json   # the GCP project, region and GitHub repository',
+    'edit infra/project.auto.tfvars.json   # the GCP project, region, repository, billing account, budget',
     'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
     'make -C .devtools infra-apply         # the services, their accounts, Workload Identity',
     'make -C .devtools infra-github        # the repository variables deploy.yml signs in with',
@@ -16,11 +16,19 @@ export default ({ slug }) => ({
   files: {
     Dockerfile: `# Cloud Build builds this from what \`make -C .devtools build\` left in dist/: .gcloudignore
 # sends it nothing else. The server is one bundled file, so the image is Node and dist/,
-# with no package manager and no node_modules. Dependabot moves the digest.
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8
+# with no shell, no package manager and no node_modules.
+#
+# Node is the exact release mise.toml pins, taken from the official image and run on
+# distroless: distroless's own Node images name only the major version. make check fails
+# when the two differ, so a Dependabot bump of this tag lands with the mise.toml one.
+FROM node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS node
+
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
 WORKDIR /app
 COPY dist ./dist
 ENV NODE_ENV=production
+ENTRYPOINT ["/usr/local/bin/node"]
 CMD ["--enable-source-maps", "dist/server/index.mjs"]
 `,
     '.gcloudignore': `# What \`gcloud run deploy --source\` uploads to Cloud Build: the Dockerfile and dist/, which
@@ -95,13 +103,21 @@ const cache = createMiddleware(async (c, next) => {
   }
 })
 
+// Asks search engines to leave the site out: for staging, which is public too.
+const noindex = createMiddleware(async (c, next) => {
+  await next()
+  c.header('X-Robots-Tag', 'noindex')
+})
+
 /**
  * Everything the service answers: /api/* from the app in app.ts, and the built client from
  * root. A path that is neither gets index.html, for the client's router, except under
  * assets/, where a missing file is a 404 rather than a page cached for a year.
  */
-export function site(root: string) {
-  return new Hono()
+export function site(root: string, options: { indexed?: boolean } = {}) {
+  const app = new Hono()
+  if (options.indexed === false) app.use(noindex)
+  return app
     .use(secureHeaders(), compress())
     .route('/', api)
     .all('/api/*', (c) => c.json({ error: 'Not found' }, 404))
@@ -156,6 +172,13 @@ describe('site', () => {
     expect(await response.text()).toContain('<title>app</title>')
     expect(response.headers.get('cache-control')).toBe('no-cache')
   })
+
+  it('is indexed unless told otherwise', async () => {
+    expect((await app.request('/')).headers.get('x-robots-tag')).toBeNull()
+    const hidden = site(root, { indexed: false })
+    expect((await hidden.request('/')).headers.get('x-robots-tag')).toBe('noindex')
+    expect((await hidden.request('/api/health')).headers.get('x-robots-tag')).toBe('noindex')
+  })
 })
 `,
     'server/index.ts': `import { fileURLToPath } from 'node:url'
@@ -167,8 +190,10 @@ import { site } from './site'
 // This runs as dist/server/index.mjs, so the client is beside it, in dist/client.
 const root = fileURLToPath(new URL('../client', import.meta.url))
 const port = Number(process.env.PORT ?? 8080)
+// infra/ sets INDEXED=false on staging.
+const app = site(root, { indexed: process.env.INDEXED !== 'false' })
 
-const server = serve({ fetch: site(root).fetch, port }, () => console.log(\`listening on \${port}\`))
+const server = serve({ fetch: app.fetch, port }, () => console.log(\`listening on \${port}\`))
 
 // Cloud Run sends SIGTERM and waits ten seconds before it stops the instance: finish the
 // requests in flight, then exit.
@@ -178,7 +203,10 @@ process.on('SIGTERM', () => server.close(() => process.exit(0)))
   "project": "${slug}",
   "region": "us-central1",
   "service": "${slug}",
-  "github_repository": "studiobimo/${slug}"
+  "github_repository": "studiobimo/${slug}",
+  "billing_account": "000000-000000-000000",
+  "monthly_budget": 25,
+  "members": []
 }
 `,
     'infra/versions.tf': `terraform {
@@ -202,6 +230,11 @@ process.on('SIGTERM', () => server.close(() => process.exit(0)))
 provider "google" {
   project = var.project
   region  = var.region
+
+  # The budget API bills its quota to a project; with a person's credentials there is none
+  # unless this names it.
+  billing_project       = var.project
+  user_project_override = true
 }
 `,
     'infra/variables.tf': `# Values in project.auto.tfvars.json, which make reads too.
@@ -225,17 +258,42 @@ variable "github_repository" {
   description = "owner/name of the only repository whose workflows may deploy."
   type        = string
 }
+
+variable "billing_account" {
+  description = "The billing account the project is on, XXXXXX-XXXXXX-XXXXXX, for its budget."
+  type        = string
+}
+
+variable "monthly_budget" {
+  description = "What the project should cost a month, in the billing account's currency."
+  type        = number
+}
+
+variable "members" {
+  description = <<-EOT
+    Who may open the app, as IAM principals such as user:ana@example.com or
+    group:admins@example.com. Empty, the app is public; otherwise Identity-Aware Proxy signs
+    people in and lets only these through. For admin tools.
+  EOT
+  type        = list(string)
+  default     = []
+}
 `,
     'infra/main.tf': `locals {
   environments = toset(["staging", "production"])
+  private      = length(var.members) > 0
 }
+
+data "google_project" "this" {}
 
 resource "google_project_service" "api" {
   for_each = toset([
     "artifactregistry.googleapis.com",
+    "billingbudgets.googleapis.com",
     "cloudbuild.googleapis.com",
     "iam.googleapis.com",
     "iamcredentials.googleapis.com",
+    "iap.googleapis.com",
     "run.googleapis.com",
     "sts.googleapis.com",
   ])
@@ -282,24 +340,41 @@ resource "google_cloud_run_v2_service" "app" {
   name     = "\${var.service}-\${each.key}"
   location = var.region
   ingress  = "INGRESS_TRAFFIC_ALL"
+  labels   = { app = var.service, environment = each.key }
 
-  # The app is public: anyone may call it, without an IAM binding to allUsers.
-  invoker_iam_disabled = true
+  # Public, anyone may call it without an IAM binding to allUsers. With members, IAP signs
+  # people in first, and only IAP may call the service.
+  invoker_iam_disabled = !local.private
+  iap_enabled          = local.private
   deletion_protection  = each.key == "production"
 
   template {
     service_account                  = google_service_account.runtime[each.key].email
+    labels                           = { app = var.service, environment = each.key }
     max_instance_request_concurrency = 80
+    # A request still unanswered after this fails with a 504, rather than holding an
+    # instance for Cloud Run's default of five minutes.
+    timeout = "60s"
 
+    # The caps are what bound the bill: the budget below only warns.
     scaling {
       min_instance_count = 0
-      max_instance_count = each.key == "production" ? 10 : 2
+      max_instance_count = each.key == "production" ? 3 : 2
     }
 
     containers {
       # A placeholder until the first deploy: from then on the image is the deploy's, not
       # OpenTofu's (ignore_changes below). Settings for the app go in env blocks here.
       image = "us-docker.pkg.dev/cloudrun/container/hello"
+
+      # Staging is public too: keep search engines out of it.
+      dynamic "env" {
+        for_each = each.key == "staging" ? { INDEXED = "false" } : {}
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
 
       resources {
         limits = {
@@ -308,6 +383,17 @@ resource "google_cloud_run_v2_service" "app" {
         }
         cpu_idle          = true
         startup_cpu_boost = true
+      }
+
+      # Traffic reaches a new revision only once the app answers, so a deploy that cannot
+      # start leaves the previous one serving.
+      startup_probe {
+        http_get {
+          path = "/api/health"
+        }
+        period_seconds    = 2
+        timeout_seconds   = 1
+        failure_threshold = 15
       }
     }
   }
@@ -318,6 +404,62 @@ resource "google_cloud_run_v2_service" "app" {
       client_version,
       template[0].containers[0].image,
     ]
+  }
+
+  depends_on = [google_project_service.api]
+}
+
+# With members, IAP calls the service for them: its agent needs to be allowed to. A project
+# whose first IAP use this is may not have the agent yet; if apply fails on it, run
+# \`gcloud beta services identity create --service=iap.googleapis.com\` and apply again.
+resource "google_cloud_run_v2_service_iam_member" "iap" {
+  for_each = local.private ? local.environments : toset([])
+  name     = google_cloud_run_v2_service.app[each.key].name
+  location = var.region
+  role     = "roles/run.invoker"
+  member   = "serviceAccount:service-\${data.google_project.this.number}@gcp-sa-iap.iam.gserviceaccount.com"
+}
+
+resource "google_iap_web_cloud_run_service_iam_member" "members" {
+  for_each = {
+    for pair in setproduct(local.private ? local.environments : toset([]), var.members) :
+    "\${pair[0]} \${pair[1]}" => { environment = pair[0], member = pair[1] }
+  }
+  project                = var.project
+  location               = var.region
+  cloud_run_service_name = google_cloud_run_v2_service.app[each.value.environment].name
+  role                   = "roles/iap.httpsResourceAccessor"
+  member                 = each.value.member
+}
+
+# Mails the billing account's admins as the month's cost reaches half, nine tenths and all
+# of monthly_budget, and when it is forecast to pass it. It stops nothing.
+resource "google_billing_budget" "project" {
+  billing_account = var.billing_account
+  display_name    = var.service
+
+  budget_filter {
+    projects = ["projects/\${data.google_project.this.number}"]
+  }
+
+  amount {
+    specified_amount {
+      units = tostring(var.monthly_budget)
+    }
+  }
+
+  threshold_rules {
+    threshold_percent = 0.5
+  }
+  threshold_rules {
+    threshold_percent = 0.9
+  }
+  threshold_rules {
+    threshold_percent = 1.0
+  }
+  threshold_rules {
+    threshold_percent = 1.0
+    spend_basis       = "FORECASTED_SPEND"
   }
 
   depends_on = [google_project_service.api]
