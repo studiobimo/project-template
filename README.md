@@ -70,10 +70,28 @@ step. A project that has to differ on purpose lists the path in `.template-ignor
 Some files only make sense for one kind of project, so they are not in the template's root. A
 profile is a second manifest, `.template/manifest.<name>`, with its files under
 `.template/profiles/<name>/`. A project opts in by listing the name in a `.template-profiles`
-file, and `sync`, `drift` and the weekly check then cover it too. Today there is one,
-`java-gradle`, for the Fabric and NeoForge mods: the Gradle convention plugins, CI, the Gradle
-Makefile targets and hooks, and the Dependabot and `.gitattributes` entries that go with them.
-The manifest says what it manages and what stays per project.
+file, and `sync`, `drift` and the weekly check then cover it too. Each manifest says what it
+manages and what stays per project.
+
+- **`java-gradle`**, for the Fabric and NeoForge mods: the Gradle convention plugins, CI, the
+  Gradle Makefile targets and hooks, and the Dependabot and `.gitattributes` entries that go
+  with them.
+- **`vite-react-tanstack`**, for a React app built with Vite, file-based TanStack Router,
+  TanStack Query and Tailwind: the shared Vite, Vitest, ESLint and TypeScript configs that the
+  project's own config files extend, Prettier, the Makefile targets, hooks and CI, pnpm pinned
+  in `mise.toml` with a week's release cooldown, a bundle budget, i18next with a lint rule
+  against inline strings, and the conventions in `AGENTS.md`. It does not choose a host.
+
+  Its generator, `.devtools/scripts/gen.mjs`, writes everything a new project needs around it
+  and installs the packages; after that it writes routes, features, components and hooks:
+
+  ```sh
+  echo vite-react-tanstack >> .template-profiles
+  make -C .devtools sync                      # then `include vite.mk` in .devtools/Makefile
+  make -C .devtools setup
+  node .devtools/scripts/gen.mjs app          # config, router and i18n wiring, packages, first build
+  node .devtools/scripts/gen.mjs route '/invoices/$invoiceId'
+  ```
 
 ## Tool versions
 

@@ -1,0 +1,38 @@
+# The vite-react-tanstack profile: what a React single-page app built with Vite and TanStack
+# (file-based Router, Query, Form) keeps in step. Opt in with `vite-react-tanstack` in the
+# project's .template-profiles. Same syntax as .template/manifest, but every path is read
+# from .template/profiles/vite-react-tanstack/ rather than from the template's root.
+#
+# Where the app is hosted is not part of it. A hosting profile (Cloudflare, GCP) is listed
+# after this one and writes .devtools/host/: the shared configs here load its Vite plugin,
+# Vitest projects, ESLint rules and make targets from there when it exists, so swapping
+# hosts touches neither this profile nor the project's own config files nor src/.
+#
+# Per project, and not listed: package.json and pnpm-lock.yaml, vite.config.ts,
+# vitest.config.ts, eslint.config.js, the tsconfig*.json at the root, index.html,
+# .prettierignore and everything under src/. Each of those imports or extends the shared
+# half in .devtools/vite/, and `node .devtools/scripts/gen.mjs app` writes a first version
+# of all of them.
+#
+# Adding the profile to a project: `include vite.mk` from .devtools/Makefile, after
+# base.mk, and remove the Makefile's own `clean` recipe. If the project already has the
+# files the blocks below go in, wrap the lines that do the same job in the markers first;
+# without them sync appends a second copy of each block.
+
+file  .devtools/vite.mk
+file  .devtools/vite/vite.ts
+file  .devtools/vite/vitest.ts
+file  .devtools/vite/eslint.js
+file  .devtools/vite/tsconfig.base.json
+file  .devtools/scripts/gen.mjs
+file  .devtools/scripts/bundle-budget.mjs
+file  .prettierrc.json
+file  .github/workflows/ci.yml
+
+block mise.toml               vite
+block pnpm-workspace.yaml     vite
+block lefthook.yml            vite
+block .gitignore              vite
+block .editorconfig           vite
+block .github/dependabot.yml  vite
+block AGENTS.md               vite

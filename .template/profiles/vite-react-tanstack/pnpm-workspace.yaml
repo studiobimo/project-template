@@ -1,0 +1,14 @@
+# >>> template:vite
+# The supply chain. pnpm resolves no version younger than a week, the same cooldown
+# Dependabot keeps, and runs no dependency's install script unless allowBuilds names it:
+# true to run it, false to block it. An unreviewed one fails the install. Add the
+# project's own entries after the end marker; they are still inside allowBuilds.
+minimumReleaseAge: 10080
+
+# eslint-plugin-jsx-a11y works with ESLint 10 but has not said so since its last release.
+peerDependencyRules:
+  allowedVersions:
+    eslint-plugin-jsx-a11y>eslint: "10"
+
+allowBuilds:
+# <<< template:vite

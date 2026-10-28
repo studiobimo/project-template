@@ -1,0 +1,42 @@
+# >>> template:vite
+# Added to the hooks in the base block. A project's own pre-commit jobs go below the closing
+# marker, indented under `jobs:`; a job there with the same name as one here changes it.
+#
+# The jobs that run the project's packages skip themselves until `make -C .devtools install`
+# has filled node_modules. That is also why CI's lint job, which installs only the tools in
+# mise.toml, passes over them: ci.yml runs the same checks once it has installed.
+pre-push:
+  jobs:
+    # Through make, which knows the hosting profile's tsc projects and generated types.
+    - name: typecheck
+      skip:
+        - run: test ! -d node_modules
+      run: make --no-print-directory -C .devtools typecheck
+
+    - name: vitest
+      skip:
+        - run: test ! -d node_modules
+      run: mise exec -- pnpm exec vitest run
+
+pre-commit:
+  # Files pnpm and the router plugin write.
+  exclude:
+    - 'pnpm-lock.yaml'
+    - 'src/routeTree.gen.ts'
+
+  jobs:
+    - name: eslint
+      glob: '*.{js,mjs,cjs,jsx,ts,tsx}'
+      skip:
+        - run: test ! -d node_modules
+      run: mise exec -- pnpm exec eslint --max-warnings=0 --no-warn-ignored {staged_files}
+
+    # Like the whitespace fixers: it rewrites the files, then fails so the change is seen.
+    - name: prettier
+      glob: '*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
+      skip:
+        - run: test ! -d node_modules
+      run: >-
+        mise exec -- pnpm exec prettier --check --log-level=warn {staged_files}
+        || { mise exec -- pnpm exec prettier --write --log-level=warn {staged_files}; exit 1; }
+# <<< template:vite

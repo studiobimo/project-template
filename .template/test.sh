@@ -129,6 +129,49 @@ echo '../src' >.template-profiles
 expect 2 "a profile name that is not a name is an error" "${psync[@]}" --check
 rm .template-profiles fixture.txt cfg.yml
 
+# Every profile the template ships: each file it lists exists, each block has its markers.
+in_repo() { (cd "$1" && shift && "$@"); }
+for manifest in "${src}"/.template/manifest.*; do
+    name="${manifest##*/manifest.}"
+    copy "${work}/profile-${name}"
+    echo "${name}" >"${work}/profile-${name}/.template-profiles"
+    expect 0 "the ${name} profile syncs into a project" \
+        in_repo "${work}/profile-${name}" .devtools/scripts/template-sync.sh --from "${src}" --ref v9.9.9
+    expect 0 "and the project is in step with it" \
+        in_repo "${work}/profile-${name}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
+done
+
+echo "vite-react-tanstack generator"
+vite="${work}/profile-vite-react-tanstack"
+gen() { (cd "${vite}" && mise exec -- node .devtools/scripts/gen.mjs "$@"); }
+routes="${vite}/src/routes"
+# shellcheck disable=SC2016 # $invoiceId is the route parameter, for gen.mjs, not the shell
+expect 0 "writes a route" gen route '/invoices/$invoiceId'
+expect 0 "named by its id" grep -qF "createFileRoute('/invoices/\$invoiceId')" "${routes}/invoices/\$invoiceId.tsx"
+expect 0 "writes an index route for a trailing slash" gen route /settings/
+expect 0 "whose id keeps the slash" grep -qF "createFileRoute('/settings/')" "${routes}/settings/index.tsx"
+expect 0 "writes the root index route" gen route /
+expect 0 "as index.tsx" grep -qF "createFileRoute('/')" "${routes}/index.tsx"
+expect 0 "writes a route in a group" gen route '/(marketing)/pricing'
+expect 0 "whose id keeps the group" grep -qF "createFileRoute('/(marketing)/pricing')" "${routes}/(marketing)/pricing.tsx"
+expect 1 "refuses to overwrite a route" gen route /settings/
+expect 1 "refuses a path that climbs out of src/routes" gen route /a/../b
+expect 1 "refuses a feature route before the feature" gen route /invoices --feature invoices
+mkdir -p "${vite}/src/locales/en" "${vite}/src/locales/es"
+expect 0 "writes a feature" gen feature invoices
+expect 0 "with its query options" test -f "${vite}/src/features/invoices/queries.ts"
+expect 0 "and its strings, in every language" \
+    test -f "${vite}/src/locales/en/invoices.json" -a -f "${vite}/src/locales/es/invoices.json"
+expect 0 "which its page reads through t()" \
+    grep -qF "useTranslation('invoices')" "${vite}/src/features/invoices/invoices-page.tsx"
+expect 0 "and then a route that loads it" gen route /invoices --feature invoices
+expect 0 "through the route's loader" grep -qF 'ensureQueryData(invoicesQueryOptions())' "${routes}/invoices.tsx"
+rm "${vite}/src/features/invoices/invoices-page.tsx"
+expect 1 "refuses a feature when any of its files is taken" gen feature invoices
+expect 1 "and writes none of them" test -f "${vite}/src/features/invoices/invoices-page.tsx"
+expect 1 "refuses an unknown generator" gen nope
+expect 1 "refuses host files without a hosting profile" gen host --no-install
+
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
 expect 2 "an unknown flag is an error" .devtools/scripts/template-sync.sh --nope
