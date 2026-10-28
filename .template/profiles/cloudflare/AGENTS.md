@@ -16,10 +16,13 @@ and `worker/` are the project's.
   inherits bindings or vars from the top level, so restate them in each.
 - **Deploy with `make -C .devtools deploy ENV=<env>`.** The environment is fixed when the
   app is built, not when it is deployed. The target builds and deploys in one step;
-  `wrangler deploy` after a plain build ships local development's bindings. On Workers
-  Builds, set `CLOUDFLARE_ENV` as a build variable, use `pnpm exec vite build` as the build
-  command, and `pnpm exec wrangler deploy` as the deploy command. No token goes in the
-  repository.
+  `wrangler deploy` after a plain build ships local development's bindings.
+- **`deploy.yml` runs the same target:** on a push to `main` to staging, and to production
+  when `release.yml` calls it for a release. It needs a repository variable,
+  `CLOUDFLARE_ACCOUNT_ID`, and in each of the `staging` and `production` GitHub
+  environments a `CLOUDFLARE_API_TOKEN` secret, from the "Edit Cloudflare Workers"
+  template and limited to the account. Don't also connect Workers Builds, or every push
+  deploys twice.
 - **Secrets** are never committed. List their names in `.dev.vars.example`. Put local
   values in `.dev.vars`, and deployed ones with
   `pnpm exec wrangler secret put <NAME> --env <env>`.

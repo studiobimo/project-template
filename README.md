@@ -94,10 +94,11 @@ manages and what stays per project.
   ```
 
 - **`cloudflare`**, a hosting profile for a `vite-react-tanstack` app: one Worker serves the
-  client and answers `/api/*` with Hono, with its tests, types, and a deploy target that
-  builds for the environment it deploys to. It manages only `.devtools/host/`, which the
-  shared configs load when it exists, so adding it, or swapping it for another host later,
-  leaves the project's own config files and `src/` alone:
+  client and answers `/api/*` with Hono, with its tests, types, a deploy target that builds
+  for the environment it deploys to, and a workflow that runs it for `main` (staging) and
+  each release (production). Apart from that workflow it manages only `.devtools/host/`,
+  which the shared configs load when it exists, so adding it, or swapping it for another
+  host later, leaves the project's own config files and `src/` alone:
 
   ```sh
   echo cloudflare >> .template-profiles
