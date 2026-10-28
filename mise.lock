@@ -278,7 +278,7 @@ specifiers = ["0.23.3"]
 version = "0.38.2"
 backend = "pipx:check-jsonschema"
 specifiers = ["0.38.2"]
-uv = { path = ".mise/locks/pipx-check-jsonschema/0.38.2", digest = "sha256:bbd5a2cbf4e38c451706ef0d82366b71067e750f44ef360ad624d33df0cf0dc9" }
+uv = { path = ".mise/locks/pipx-check-jsonschema/0.38.2", digest = "sha256:bdc195ae4c8034c9a66ea9d2e839bc6dbbe930f66529e165897be54e5c3b3dc5" }
 
 [[tools."pipx:pre-commit-hooks"]]
 version = "6.0.0"
