@@ -175,6 +175,13 @@ cp -R "${work}/profile-cloudflare/.devtools/host" "${vite}/.devtools/"
 expect 0 "writes the hosting profile's files" gen host --no-install
 expect 0 "naming the Worker after the project" \
     grep -qF '"name": "profile-vite-react-tanstack"' "${vite}/wrangler.jsonc"
+rm -r "${vite}/.devtools/host"
+cp -R "${work}/profile-gcp/.devtools/host" "${vite}/.devtools/"
+expect 0 "writes another hosting profile's files" gen host --no-install
+expect 0 "naming the Cloud Run service after the project" \
+    grep -qF '"service": "profile-vite-react-tanstack"' "${vite}/infra/project.auto.tfvars.json"
+expect 0 "with an image on the Node mise.toml pins" \
+    grep -q "^FROM node:$(sed -n 's/^node = "\(.*\)"/\1/p' mise.toml)-" "${vite}/Dockerfile"
 
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"

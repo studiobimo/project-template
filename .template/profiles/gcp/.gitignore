@@ -1,0 +1,7 @@
+# >>> template:gcp
+# OpenTofu's working directory, and any state or plan written locally: the state lives in GCS
+infra/.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+# <<< template:gcp

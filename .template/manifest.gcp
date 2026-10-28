@@ -1,0 +1,31 @@
+# The gcp profile: hosting on Google Cloud Run for an app on the vite-react-tanstack profile.
+# One service serves the built client and answers /api/* with a Hono app on Node, and
+# OpenTofu describes the GCP project around it. Opt in with `gcp` in the project's
+# .template-profiles, after vite-react-tanstack. Same syntax as .template/manifest, but every
+# path is read from .template/profiles/gcp/ rather than from the template's root.
+#
+# Most of what it manages is in .devtools/host/, which the vite-react-tanstack profile's
+# shared configs load when it exists: its Vite plugin and server build, its Vitest project,
+# its ESLint rules and its make targets. Nothing in the project's own config files names the
+# host, so a project lists one hosting profile at a time. Moving to another is a swap of
+# names in .template-profiles, `rm -r .devtools/host`, and a sync.
+#
+# Per project, and not listed: Dockerfile, .gcloudignore, everything under server/ and
+# infra/, and the job in release.yml that deploys a release (deploy.yml shows it).
+# `node .devtools/scripts/gen.mjs host` writes a first version of them and installs the
+# packages; `gen.mjs app` does the same when the profile is there first.
+
+file  .devtools/host/host.mk
+file  .devtools/host/vite.ts
+file  .devtools/host/server.ts
+file  .devtools/host/vitest.ts
+file  .devtools/host/eslint.js
+file  .devtools/host/scaffold.mjs
+file  .github/workflows/deploy.yml
+
+block mise.toml               gcp
+block lefthook.yml            gcp
+block .gitignore              gcp
+block .editorconfig           gcp
+block .github/dependabot.yml  gcp
+block AGENTS.md               gcp

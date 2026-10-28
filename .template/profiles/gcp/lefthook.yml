@@ -1,0 +1,6 @@
+# >>> template:gcp
+    # Inside the vite block's pre-commit jobs.
+    - name: tofu-fmt
+      glob: '*.tf'
+      run: mise exec -- tofu fmt -check -diff {staged_files}
+# <<< template:gcp

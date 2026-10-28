@@ -1,0 +1,88 @@
+name: Deploy
+
+# Deploys to Cloud Run with `make -C .devtools deploy`, the target a developer runs:
+#
+#   push to main            -> staging
+#   a release               -> production, from release.yml (below)
+#   run it from Actions     -> either
+#
+# It signs in to GCP with Workload Identity Federation, so no key is stored anywhere. It
+# reads two repository variables, GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT,
+# which `make -C .devtools infra-github` sets; until they are set it skips. Each run is in a
+# GitHub environment named after its target, so that environment's rules (reviewers,
+# branches) gate it. Managed by studiobimo/project-template (profile gcp).
+#
+# release-please tags with GITHUB_TOKEN, which starts no other workflow, so production is
+# deployed by a job in release.yml that calls this one:
+#
+#   deploy:
+#     needs: release
+#     if: needs.release.outputs.release-created == 'true'
+#     permissions:
+#       contents: read
+#       id-token: write
+#     uses: ./.github/workflows/deploy.yml
+#     with:
+#       environment: production
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: Where to deploy
+        type: choice
+        options: [staging, production]
+        default: staging
+  workflow_call:
+    inputs:
+      environment:
+        description: staging or production
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  deploy:
+    if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    environment: ${{ inputs.environment || 'staging' }}
+    permissions:
+      contents: read
+      id-token: write
+    # One deploy per environment at a time, each run to the end: a newer one queues.
+    concurrency:
+      group: deploy-${{ inputs.environment || 'staging' }}
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      # No cache: what is deployed is built from the lockfiles alone.
+      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
+        with:
+          version: 2026.10.0
+          cache: false
+
+      - name: make install
+        run: make -C .devtools install
+
+      # It writes a credentials file into the workspace. .gcloudignore keeps it out of what
+      # the deploy uploads, which is only the Dockerfile and dist/.
+      - uses: google-github-actions/auth@7c6bc770dae815cd3e89ee6cdf493a5fab2cc093 # v3.0.0
+        with:
+          workload_identity_provider: ${{ vars.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ vars.GCP_SERVICE_ACCOUNT }}
+
+      - uses: google-github-actions/setup-gcloud@aa5489c8933f4cc7a4f7d45035b3b1440c9c10db # v3.0.1
+        with:
+          version: 590.0.0
+
+      - name: make deploy
+        env:
+          DEPLOY_ENV: ${{ inputs.environment || 'staging' }}
+        run: make -C .devtools deploy ENV="${DEPLOY_ENV}"
