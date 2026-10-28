@@ -1,0 +1,25 @@
+# The cloudflare profile: hosting on Cloudflare Workers for an app on the vite-react-tanstack
+# profile. One Worker serves the built client as static assets and answers /api/* with a
+# Hono app. Opt in with `cloudflare` in the project's .template-profiles, after
+# vite-react-tanstack. Same syntax as .template/manifest, but every path is read from
+# .template/profiles/cloudflare/ rather than from the template's root.
+#
+# Everything it manages is in .devtools/host/, which the vite-react-tanstack profile's
+# shared configs load when it exists: its Vite plugin, its Vitest project, its ESLint rules
+# and its make targets. Nothing in the project's own config files names the host, so a
+# project lists one hosting profile at a time, and moving to another is a swap of names in
+# .template-profiles and a sync.
+#
+# Per project, and not listed: wrangler.jsonc, .dev.vars.example and everything under
+# worker/. `node .devtools/scripts/gen.mjs host` writes a first version of them and
+# installs the packages; `gen.mjs app` does the same when the profile is there first.
+
+file  .devtools/host/host.mk
+file  .devtools/host/vite.ts
+file  .devtools/host/vitest.ts
+file  .devtools/host/eslint.js
+file  .devtools/host/scaffold.mjs
+
+block .gitignore           cloudflare
+block pnpm-workspace.yaml  cloudflare
+block AGENTS.md            cloudflare
