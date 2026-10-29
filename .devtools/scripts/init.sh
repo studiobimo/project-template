@@ -10,66 +10,58 @@
 # creates those deployment environments.
 set -euo pipefail
 
+here="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source-path=SCRIPTDIR
+. "${here}/strings.sh" || exit 1
+# Read by die, in strings.sh: init.sh has no drift to report, so an error is 1.
+DIE_STATUS=1
+
 name="${NAME:-}"
 slug="${SLUG:-}"
 desc="${DESC:-}"
 
-die() {
-    echo "✖ $*" >&2
-    exit 1
-}
-
-root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "not inside a git repository"
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "${MSG_NOT_GIT_REPO}"
 cd "${root}"
+self=".devtools/scripts/${BASH_SOURCE[0]##*/}"
 
-[[ -d .template ]] || die "no .template/ here: this project is already initialised"
-[[ -n "${name}" && -n "${slug}" && -n "${desc}" ]] \
-    || die 'usage: make -C .devtools init NAME="My Project" SLUG=my-project DESC="What it is."'
-[[ "${slug}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] \
-    || die "SLUG must be kebab-case (lowercase letters, digits, single hyphens): ${slug}"
+[[ -d "${TEMPLATE_DIR}" ]] || die "${MSG_INIT_DONE_ALREADY}"
+[[ -n "${name}" && -n "${slug}" && -n "${desc}" ]] || die "${MSG_INIT_USAGE}"
+[[ "${slug}" =~ ^[a-z0-9]+(-[a-z0-9]+)*$ ]] || die "${MSG_INIT_BAD_SLUG}" "${slug}"
 
-mv .template/README.md README.md
-rm -rf .template
-rm -f CHANGELOG.md .template-version
-printf '{\n  ".": "0.0.0"\n}\n' >.release-please-manifest.json
+mv "${TEMPLATE_DIR}/README.md" README.md
+rm -rf "${TEMPLATE_DIR}"
+rm -f CHANGELOG.md "${TEMPLATE_VERSION}"
+say "${RELEASE_MANIFEST_INITIAL}" >"${RELEASE_MANIFEST}"
 
 files=()
 while IFS= read -r f; do
     [[ -f "${f}" ]] || continue
     case "${f}" in
-        mise.lock | .mise/* | .devtools/scripts/init.sh | *.png | *.jpg | *.zip) continue ;;
+        mise.lock | .mise/* | "${self}" | *.png | *.jpg | *.zip) continue ;;
     esac
     files+=("${f}")
 done < <(git ls-files --cached --others --exclude-standard)
 
 # Drop the regions that only make sense in the template itself (and the blank line
 # before each, so no file is left with a double gap), then fill in the placeholders.
-NAME="${name}" SLUG="${slug}" DESC="${desc}" perl -0pi -e '
-    s/(?:^\n)?^[^\n]*>>> template:init.*?<<< template:init[^\n]*\n//msg;
-    s/\QProject Name\E/$ENV{NAME}/g;
-    s/\Qproject-slug\E/$ENV{SLUG}/g;
-    s/\QOne-line project description.\E/$ENV{DESC}/g;
+# Every value reaches perl through the environment, so none of it is read as a pattern.
+START="${MARK_START}${INIT_BLOCK}" END="${MARK_END}${INIT_BLOCK}" \
+    FROM_NAME="${PLACEHOLDER_NAME}" FROM_SLUG="${PLACEHOLDER_SLUG}" FROM_DESC="${PLACEHOLDER_DESC}" \
+    NAME="${name}" SLUG="${slug}" DESC="${desc}" perl -0pi -e '
+    s/(?:^\n)?^[^\n]*\Q$ENV{START}\E\b.*?\Q$ENV{END}\E\b[^\n]*\n//msg;
+    s/\Q$ENV{FROM_NAME}\E/$ENV{NAME}/g;
+    s/\Q$ENV{FROM_SLUG}\E/$ENV{SLUG}/g;
+    s/\Q$ENV{FROM_DESC}\E/$ENV{DESC}/g;
 ' "${files[@]}"
 
-rm -- .devtools/scripts/init.sh
+rm -- "${self}"
 
-echo "✔ ${name} (${slug}) is initialised."
+ok "${MSG_INIT_DONE}" "${name}" "${slug}"
 echo
 
 # The files are done either way, so a GitHub failure is reported and not fatal.
-if ! DESC="${desc}" ENVS="${ENVS:-}" .devtools/scripts/github-setup.sh; then
-    echo "✖ GitHub is not set up. Fix the above, then: make -C .devtools github" >&2
+if ! DESC="${desc}" ENVS="${ENVS:-}" "${here}/github-setup.sh"; then
+    fail "${MSG_INIT_NO_GITHUB}"
 fi
 
-# main only takes pull requests once the rulesets are on, so the first commit is one.
-cat <<MSG
-
-    Next:
-    make -C .devtools setup    # pinned tools + git hooks
-    make -C .devtools check    # confirm everything passes
-    git switch -c chore/initialise-project
-    git add -A && git commit -m "chore: initialise from project-template"
-    git push -u origin HEAD && gh pr create --fill
-
-    Then fill in AGENTS.md (Project, Layout, Conventions) and README.md.
-MSG
+say "${MSG_INIT_NEXT}"

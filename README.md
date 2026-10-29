@@ -50,7 +50,7 @@ of three kinds, and [`.template/manifest`](.template/manifest) says which:
 
 | Kind | Examples | After day one |
 | --- | --- | --- |
-| **Managed file** | `.devtools/base.mk`, `.devtools/lefthook-base.yml`, `agent-guard.sh`, `github-setup.sh`, `.codex/*`, `pr-checks.yml` | Identical everywhere. `sync` overwrites it. |
+| **Managed file** | `.devtools/base.mk`, `.devtools/lefthook-base.yml`, `.devtools/scripts/*.sh` (`strings.sh` holds their names and messages), `.codex/*`, `pr-checks.yml` | Identical everywhere. `sync` overwrites it. |
 | **Managed block** | the `base` region of `.gitignore`, the shared tools in `mise.toml`, the rules in `AGENTS.md` | Identical between its `>>> template:<name>` and `<<< template:<name>` markers. The rest of the file is the project's. |
 | **Seeded** | `README.md`, `.devtools/Makefile`, `.commitlintrc.yaml`, `release.yml` | The project's. Never compared. |
 
@@ -66,8 +66,9 @@ open while anything differs, rewrites it as that changes, and closes it when the
 step. A project that has to differ on purpose lists the path in `.template-ignore`.
 
 Some entries are marked `required` in the manifest: the agent guard, the shared hooks, the PR and
-drift workflows, `template-sync.sh` itself, the rules in `AGENTS.md`, and the `overrides` block of
-`CODEOWNERS`. They are what keeps every repo honest, so `.template-ignore` cannot switch them off:
+drift workflows, `template-sync.sh` itself and the `strings.sh` it reads, the rules in `AGENTS.md`,
+and the `overrides` block of `CODEOWNERS`.
+They are what keeps every repo honest, so `.template-ignore` cannot switch them off:
 listing one there is reported as drift, and `sync` applies it anyway. The `overrides` block makes
 the fleet's owners review every change to `.template-ignore`, `.template-profiles`, the tool pins
 and the agent settings, so a repo can still depart from the template, but not without review.

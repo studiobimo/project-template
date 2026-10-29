@@ -25,7 +25,8 @@ built with, and where most of the code lives. Then the pointers below. -->
 
 ```text
 .devtools/               Makefile (project targets), base.mk (shared targets), lefthook-base.yml (shared hooks)
-  scripts/               agent-guard.sh, template-sync.sh, github-setup.sh, and this project's own scripts
+  scripts/               agent-guard.sh, template-sync.sh, github-setup.sh, and this project's own scripts;
+                         strings.sh holds every name and message the shared ones print
 .github/workflows/       thin wrappers over studiobimo/.github reusable workflows
 .claude/  .codex/        agent settings and the PreToolUse hook that runs agent-guard.sh
 mise.toml  mise.lock     every tool the hooks and CI run, pinned; .mise/locks/ belongs with them
@@ -64,7 +65,8 @@ violation is caught before it is reviewed.
   tested, say so plainly rather than implying it was.
 
 A PreToolUse hook (`.devtools/scripts/agent-guard.sh`) blocks `gh pr create`, `gh stack submit`
-and `git push` when the PR-size rule is violated, and blocks non-conventional branch names.
+and `git push` when the PR-size rule is violated, and blocks non-conventional branch names from
+`git switch -c`, `git checkout -b`, `git worktree add -b`, `git branch` and `gh stack`.
 
 ## Where shared things live
 
