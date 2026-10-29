@@ -1,0 +1,3 @@
+# Every issue starts from a form, and each form starts its title with a Conventional
+# Commit type. The issue-title workflow holds the finished title to the same rules.
+blank_issues_enabled: false

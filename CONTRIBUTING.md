@@ -43,6 +43,15 @@ body line.
 PRs are **squash-merged**, so the **PR title** must also be a Conventional Commit.
 It becomes the commit on `main` that release-please reads.
 
+### Issues: titled like the commit that closes them
+
+An issue's title follows the same format: `fix: the export drops the last row`,
+`feat(api): paginate the search results`, `docs: explain the release flow`. Every issue starts
+from a form (bug report, feature request or task), and each form starts the title with its type.
+The `issue-title` workflow lints the finished title with the same commitlint rules; while it
+fails, the issue carries the `needs-conventional-title` label and one comment saying what to
+change, and both go once the title is fixed.
+
 ### Pull requests: at most 20 files
 
 Keep every PR to **20 changed files or fewer**. Split larger work into a **stack**:
