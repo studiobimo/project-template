@@ -16,3 +16,9 @@ Thumbs.db
 # Editors
 .idea/
 .vscode/
+
+# >>> template:init
+# What building a profile's sources in place leaves behind.
+.template/profiles/*/build-logic/.gradle/
+.template/profiles/*/build-logic/build/
+# <<< template:init

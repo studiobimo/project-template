@@ -19,6 +19,7 @@
 
 file  .devtools/base.mk
 file  .devtools/lefthook-base.yml               required
+file  .devtools/scripts/strings.sh              required
 file  .devtools/scripts/agent-guard.sh          required
 file  .devtools/scripts/template-sync.sh        required
 file  .devtools/scripts/github-setup.sh

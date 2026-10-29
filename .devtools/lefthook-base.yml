@@ -83,9 +83,10 @@ pre-commit:
       glob: '.github/dependabot.{yml,yaml}'
       run: mise exec -- check-jsonschema --builtin-schema vendor.dependabot {staged_files}
 
+    # --external-sources follows a script into the files it sources, strings.sh among them.
     - name: shellcheck
       glob: '*.sh'
-      run: mise exec -- shellcheck {staged_files}
+      run: mise exec -- shellcheck --external-sources {staged_files}
 
     - name: markdownlint
       glob: '*.md'
