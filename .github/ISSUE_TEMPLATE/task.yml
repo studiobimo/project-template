@@ -1,0 +1,20 @@
+name: Task
+description: Docs, refactoring, tests, tooling, or anything else that is neither a bug nor a feature.
+title: 'chore: '
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Title it like the change that will close it, and swap `chore` for the type that
+        fits: `docs`, `refactor`, `test`, `build`, `ci`, `perf`, `style` or `chore`.
+        For example `docs(readme): explain the release flow`.
+  - type: textarea
+    id: what
+    attributes:
+      label: What needs doing, and why?
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: How will we know it is done?
