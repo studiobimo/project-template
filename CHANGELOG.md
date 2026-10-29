@@ -1,5 +1,22 @@
 # Changelog
 
+## [0.5.0](https://github.com/studiobimo/project-template/compare/v0.4.1...v0.5.0) (2026-10-29)
+
+
+### Features
+
+* **devtools:** add required manifest entries and review override files ([#29](https://github.com/studiobimo/project-template/issues/29)) ([3c0698b](https://github.com/studiobimo/project-template/commit/3c0698b3c7cc163106178472b947ef71a96a8d77))
+* **devtools:** add the cloudflare hosting profile ([#23](https://github.com/studiobimo/project-template/issues/23)) ([2f7f161](https://github.com/studiobimo/project-template/commit/2f7f16193d007d210856c04d6de32a4a73423ed3))
+* **devtools:** add the gcp hosting profile ([#25](https://github.com/studiobimo/project-template/issues/25)) ([4ec4b65](https://github.com/studiobimo/project-template/commit/4ec4b65cb8713b6378de125560774b3b78120395))
+* **devtools:** add the vite-react-tanstack profile ([#22](https://github.com/studiobimo/project-template/issues/22)) ([f83b0e5](https://github.com/studiobimo/project-template/commit/f83b0e53340c42b910347e2ebfb7982d9fc9bffe))
+* **devtools:** deploy the cloudflare profile from github actions ([#26](https://github.com/studiobimo/project-template/issues/26)) ([bb5498a](https://github.com/studiobimo/project-template/commit/bb5498a5c8e1e49be7eeefc5fe533cefcd9e531c))
+
+
+### Bug Fixes
+
+* **deps:** refresh the check-jsonschema lock for certifi 2026.10.19 ([#28](https://github.com/studiobimo/project-template/issues/28)) ([8c8447f](https://github.com/studiobimo/project-template/commit/8c8447f7a45b4d83efb14165796adea518e00852))
+* **devtools:** leave the generated changelog out of typos ([#30](https://github.com/studiobimo/project-template/issues/30)) ([7cea7ca](https://github.com/studiobimo/project-template/commit/7cea7ca5066302eceaaf66d869c4a1b482ea01a2))
+
 ## [0.4.1](https://github.com/studiobimo/project-template/compare/v0.4.0...v0.4.1) (2026-10-10)
 
 
