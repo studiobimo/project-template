@@ -80,7 +80,9 @@ weekly workflow reports as an issue.
 
 A managed block sits between `>>> template:<name>` and `<<< template:<name>` marker lines, like
 this section. Edit outside the markers freely; inside them, change the template instead. If a
-difference is deliberate, list the path in `.template-ignore` with a comment saying why.
+difference is deliberate, list the path in `.template-ignore` with a comment saying why. Entries
+the manifest marks `required` cannot be ignored, and CODEOWNERS sends any change to the override
+files to the fleet's owners.
 <!-- <<< template:rules -->
 
 ## Commands

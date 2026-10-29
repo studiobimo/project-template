@@ -11,7 +11,7 @@
 #
 # The template's .template/manifest says what is managed: whole files, and marked
 # blocks inside files the project otherwise owns. Paths listed in this repo's
-# .template-ignore are left alone.
+# .template-ignore are left alone, unless the manifest marks the entry `required`.
 #
 # A project can also opt in to profiles, one per line in its .template-profiles. A
 # profile is a second manifest, .template/manifest.<name>, whose files and blocks are
@@ -190,19 +190,32 @@ sync_block() {
 
 # apply_manifest <manifest>: sync, or check, every entry in it.
 apply_manifest() {
-    local kind path name _
-    while read -r kind path name _; do
+    local kind path name flag _
+    while read -r kind path name flag _; do
         case "${kind}" in
             '' | '#'*) continue ;;
+            file) flag="${name}"; name="" ;;
+            block) [[ -n "${name}" && "${name}" != required ]] || die "manifest: block ${path} needs a name" ;;
+            *) die "manifest: unknown entry '${kind} ${path}'" ;;
         esac
+        [[ -z "${flag}" || "${flag}" == required ]] || die "manifest: unknown flag '${flag}' on ${path}"
+
         if ignored "${path}"; then
-            echo "– ${path}: ignored by .template-ignore"
-            continue
+            if [[ "${flag}" != required ]]; then
+                echo "– ${path}: ignored by .template-ignore"
+                continue
+            fi
+            # Ignoring it would switch off a guard every repo relies on, so the entry is
+            # applied anyway, and the line in .template-ignore stays drift until it goes.
+            if [[ "${mode}" == check ]]; then
+                report "${path}" "listed in .template-ignore, but the template requires it"
+            else
+                echo "✖ ${path}: the template requires it, so .template-ignore has no effect; remove it there"
+            fi
         fi
         case "${kind}" in
             file) sync_file "${path}" ;;
-            block) sync_block "${path}" "${name:?manifest: block ${path} needs a name}" ;;
-            *) die "manifest: unknown entry '${kind} ${path}'" ;;
+            block) sync_block "${path}" "${name}" ;;
         esac
     done <"$1"
 }

@@ -4,3 +4,19 @@
 # Release and supply-chain configuration: extra care required.
 /.github/                        @davidmoralesz
 /.devtools/                      @davidmoralesz
+
+# >>> template:overrides
+# Where a project departs from the fleet: the profiles it takes, the managed files it opts
+# out of, its pinned tools, its hooks and its agents' settings. A change to any of them is
+# reviewed by the fleet's owners, whoever owns the rest of the repo. The last matching line
+# wins, so this block stays at the end of the file.
+/.template-ignore                @davidmoralesz
+/.template-profiles              @davidmoralesz
+/mise.toml                       @davidmoralesz
+/mise.lock                       @davidmoralesz
+/.mise/                          @davidmoralesz
+/lefthook.yml                    @davidmoralesz
+/.commitlintrc.yaml              @davidmoralesz
+/.claude/                        @davidmoralesz
+/.codex/                         @davidmoralesz
+# <<< template:overrides

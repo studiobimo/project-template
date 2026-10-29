@@ -79,6 +79,15 @@ expect 0 ".template-ignore exempts a path" "${sync[@]}" --check
 expect 0 "sync leaves an ignored path alone" "${sync[@]}"
 expect 0 "the local edit is still there" grep -q 'edited locally' lychee.toml
 
+echo "# edited locally" >>.devtools/scripts/agent-guard.sh
+printf '# We check extra hosts here.\nlychee.toml\n# ours\n.devtools/scripts/agent-guard.sh\n' >.template-ignore
+expect 1 "a required path in .template-ignore is drift" "${sync[@]}" --check
+expect 0 "sync applies a required entry anyway" "${sync[@]}"
+expect 1 "so the local edit is gone" grep -q 'edited locally' .devtools/scripts/agent-guard.sh
+expect 1 "and the ignore line stays drift until it goes" "${sync[@]}" --check
+printf '# We check extra hosts here.\nlychee.toml\n' >.template-ignore
+expect 0 "in step once it has gone" "${sync[@]}" --check
+
 newer="${work}/newer"
 cp -R "${src}" "${newer}"
 {
@@ -122,6 +131,18 @@ printf '# ours\nfixture.txt\n' >.template-ignore
 expect 0 ".template-ignore exempts a path inside a profile" "${psync[@]}" --check
 rm .template-ignore
 expect 0 "sync puts it right again" "${psync[@]}"
+
+printf 'file   fixture.txt\nblock  cfg.yml  extra  required\n' >"${prof}/.template/manifest.fixture"
+sed -i.bak 's/^key: value$/key: other/' cfg.yml && rm cfg.yml.bak
+printf '# ours\ncfg.yml\n' >.template-ignore
+expect 1 "a required block cannot be ignored either" "${psync[@]}" --check
+expect 0 "sync rewrites it anyway" "${psync[@]}"
+expect 0 "the block is the profile's again" grep -qx 'key: value' cfg.yml
+rm .template-ignore
+printf 'file   fixture.txt  optional\n' >"${prof}/.template/manifest.fixture"
+expect 2 "an unknown flag in a manifest is an error" "${psync[@]}" --check
+printf 'block  cfg.yml  required\n' >"${prof}/.template/manifest.fixture"
+expect 2 "a block needs a name before its flag" "${psync[@]}" --check
 
 echo nope >.template-profiles
 expect 2 "a profile the template does not have is an error, not drift" "${psync[@]}" --check
