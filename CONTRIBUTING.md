@@ -65,7 +65,9 @@ Some files, and the regions of others between `>>> template:<name>` and `<<< tem
 markers, are kept in step with `studiobimo/project-template`. Change them there, not here; then
 `make -C .devtools sync` brings the change in. `make -C .devtools drift` shows what differs, and a
 weekly workflow opens an issue when something does. A deliberate difference goes in
-`.template-ignore`, with a comment saying why.
+`.template-ignore`, with a comment saying why. Entries the manifest marks `required` cannot be
+ignored, and a change to `.template-ignore` or `.template-profiles` needs the fleet's owners to
+review it.
 
 Projects only receive a change at a release, and release-please releases only `fix`, `feat` and
 breaking commits. A change to a managed file titled `chore`, `docs` or `ci` merges but never reaches

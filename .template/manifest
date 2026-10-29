@@ -9,29 +9,35 @@
 # Anything not listed is seeded once and then belongs to the project. A project opts
 # out of an entry by listing its path in .template-ignore, with a comment saying why.
 #
+# An entry that ends in `required` cannot be opted out of: it is one of the guards every
+# repo relies on, or what reports when a repo drifts. Listing its path in .template-ignore
+# is itself drift, and sync applies the entry anyway. Make an entry required here, in a
+# reviewed change to the template, never in a project.
+#
 # Nothing listed here may contain the init placeholders (Project Name, project-slug):
 # init.sh would rewrite them and the new project would be born drifted.
 
 file  .devtools/base.mk
-file  .devtools/lefthook-base.yml
-file  .devtools/scripts/agent-guard.sh
-file  .devtools/scripts/template-sync.sh
+file  .devtools/lefthook-base.yml               required
+file  .devtools/scripts/agent-guard.sh          required
+file  .devtools/scripts/template-sync.sh        required
 file  .devtools/scripts/github-setup.sh
 file  .codex/config.toml
-file  .codex/hooks.json
+file  .codex/hooks.json                         required
 file  CLAUDE.md
 file  LICENSE
 file  lychee.toml
 file  .markdownlint-cli2.yaml
 file  .github/zizmor.yml
-file  .github/workflows/pr-checks.yml
-file  .github/workflows/template-drift.yml
+file  .github/workflows/pr-checks.yml           required
+file  .github/workflows/template-drift.yml      required
 
 block .gitignore              base
 block .gitattributes          base
 block .editorconfig           base
 block .github/dependabot.yml  base
 block mise.toml               base
-block lefthook.yml            base
-block AGENTS.md               rules
+block lefthook.yml            base       required
+block AGENTS.md               rules      required
 block CONTRIBUTING.md         workflow
+block .github/CODEOWNERS      overrides  required

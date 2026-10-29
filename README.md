@@ -65,6 +65,13 @@ Each project also runs `template-drift.yml` weekly. It keeps one issue labelled 
 open while anything differs, rewrites it as that changes, and closes it when the repo is back in
 step. A project that has to differ on purpose lists the path in `.template-ignore`.
 
+Some entries are marked `required` in the manifest: the agent guard, the shared hooks, the PR and
+drift workflows, `template-sync.sh` itself, the rules in `AGENTS.md`, and the `overrides` block of
+`CODEOWNERS`. They are what keeps every repo honest, so `.template-ignore` cannot switch them off:
+listing one there is reported as drift, and `sync` applies it anyway. The `overrides` block makes
+the fleet's owners review every change to `.template-ignore`, `.template-profiles`, the tool pins
+and the agent settings, so a repo can still depart from the template, but not without review.
+
 ### Profiles
 
 Some files only make sense for one kind of project, so they are not in the template's root. A
