@@ -23,7 +23,7 @@
 // _auth layout), /(marketing)/pricing (in the marketing group, served at /pricing).
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { basename, dirname, join, matchesGlob, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
@@ -37,6 +37,22 @@ const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, p
 const appDir = read('.devtools/Makefile').match(/^APP_DIR\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
 const app = join(root, appDir)
 const workspace = appDir !== '.'
+
+/**
+ * Whether the block list under pnpm-workspace.yaml's packages: key takes in APP_DIR. An app it
+ * leaves out still installs, but on its own: with a lockfile of its own, and outside `make install`.
+ */
+function workspaceListsApp() {
+  const [, list = ''] =
+    read('pnpm-workspace.yaml').match(/^packages:\n((?:[ \t]*(?:-.*|#.*)?\n)*)/m) ?? []
+  const globs = [...list.matchAll(/^\s*-\s*['"]?([^'"\s]+)/gm)].map(([, glob]) => glob)
+  const dir = relative(root, app)
+  const listed = (glob) => matchesGlob(dir, glob)
+  return (
+    globs.filter((glob) => !glob.startsWith('!')).some(listed) &&
+    !globs.filter((glob) => glob.startsWith('!')).some((glob) => listed(glob.slice(1)))
+  )
+}
 
 const die = (message) => {
   console.error(`${glyph.fail} ${message}`)
@@ -363,7 +379,7 @@ describe('use${P}', () => {
   },
 
   async app(_, { install: installing }) {
-    if (workspace && !/^packages:/m.test(read('pnpm-workspace.yaml'))) {
+    if (workspace && !workspaceListsApp()) {
       die(say.noWorkspace(appDir))
     }
     const { slug, name, description, nodeMajor, repo } = project()

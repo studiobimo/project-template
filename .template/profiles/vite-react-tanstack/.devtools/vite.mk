@@ -7,10 +7,11 @@
 PNPM := cd $(ROOT) && $(MISE) exec -- pnpm
 
 # The app's directory, from the repository's root. A workspace sets it in Makefile, above the
-# line that includes this file.
+# line that includes this file. These two expand when a recipe runs, so make and gen.mjs, which
+# finds the line anywhere in Makefile, still agree if it ends up below.
 APP_DIR ?= .
-APP_CD := cd $(ROOT)/$(APP_DIR)
-APP_PNPM := $(APP_CD) && $(MISE) exec -- pnpm
+APP_CD = cd $(ROOT)/$(APP_DIR)
+APP_PNPM = $(APP_CD) && $(MISE) exec -- pnpm
 
 # The bundle budget. Raise a number in the project's Makefile, in the same pull request as
 # the change that needs it, so the growth is reviewed rather than discovered.

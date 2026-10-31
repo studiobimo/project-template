@@ -244,7 +244,12 @@ printf 'APP_DIR := apps/web\n' >>"${shop}/.devtools/Makefile"
 printf '# Acme Shop\n\nSells things.\n' >"${shop}/README.md"
 expect 1 "refuses an app the workspace does not list" gen_in "${shop}" app --no-install
 expect 1 "and writes nothing" test -e "${shop}/eslint.config.js"
-{ printf 'packages:\n  - apps/*\n\n'; cat "${shop}/pnpm-workspace.yaml"; } >"${work}/workspace"
+cp "${shop}/pnpm-workspace.yaml" "${work}/no-packages"
+{ printf 'packages:\n  - packages/*\n\n'; cat "${work}/no-packages"; } >"${shop}/pnpm-workspace.yaml"
+expect 1 "or one that lists only other packages" gen_in "${shop}" app --no-install
+{ printf 'packages:\n  - apps/*\n  - "!apps/web"\n\n'; cat "${work}/no-packages"; } >"${shop}/pnpm-workspace.yaml"
+expect 1 "or leaves it out by name" gen_in "${shop}" app --no-install
+{ printf 'packages:\n  - apps/*\n\n'; cat "${work}/no-packages"; } >"${work}/workspace"
 cp "${work}/workspace" "${shop}/pnpm-workspace.yaml"
 expect 0 "a packages: key above the blocks is in step" \
     in_repo "${shop}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
@@ -270,6 +275,15 @@ expect 0 "writes later files into APP_DIR too" gen_in "${shop}" feature invoices
 expect 0 "beside the catalogs it found there" test -f "${shop}/apps/web/src/locales/en/invoices.json"
 expect 0 "and routes that load them" gen_in "${shop}" route /invoices --feature invoices
 expect 0 "at the app's own path" test -f "${shop}/apps/web/src/routes/invoices.tsx"
+
+# make reads APP_DIR on either side of the include, as gen.mjs does. `types` is the host's.
+runs_in_app() { make -n --no-print-directory -C "${shop}/.devtools" -f "$1" "$2" | grep -q 'cd .*/apps/web'; }
+printf 'APP_DIR := apps/web\ninclude base.mk\ninclude vite.mk\n' >"${shop}/.devtools/above.mk"
+printf 'include base.mk\ninclude vite.mk\nAPP_DIR := apps/web\n' >"${shop}/.devtools/below.mk"
+expect 0 "make runs in APP_DIR when it is set above the include" runs_in_app above.mk dev
+expect 0 "and when it is set below" runs_in_app below.mk dev
+expect 0 "the host's recipes too" runs_in_app below.mk types
+rm "${shop}/.devtools/above.mk" "${shop}/.devtools/below.mk"
 
 flat="${work}/flat-shop"
 generated "${flat}"
