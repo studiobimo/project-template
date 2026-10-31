@@ -1,7 +1,7 @@
 # >>> template:cloudflare
 # Wrangler's local state and the Env type it generates
 .wrangler/
-worker/worker-configuration.d.ts
+**/worker/worker-configuration.d.ts
 
 # Local Worker secrets; commit a .dev.vars.example with the names instead
 .dev.vars

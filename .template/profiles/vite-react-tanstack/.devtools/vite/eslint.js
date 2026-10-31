@@ -4,6 +4,9 @@
 // there is one. eslint.config.js spreads them and adds the project's own:
 //
 //   export default defineConfig([app, { files: ['src/**/*.tsx'], rules: { ... } }])
+//
+// It sits at the repository's root even in a workspace, where basePath scopes these rules to
+// the app: defineConfig([{ basePath: 'apps/web', extends: [app] }]).
 import { existsSync } from 'node:fs'
 
 import js from '@eslint/js'

@@ -2,7 +2,8 @@
 // Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
 //
 // Scaffolds on-convention code, so a new file starts formatted, lint-clean and tested
-// rather than copied from whichever file was nearest. It never overwrites a file.
+// rather than copied from whichever file was nearest. It never overwrites a file. The paths
+// below are from APP_DIR, which .devtools/Makefile sets for an app in a workspace.
 //
 //   gen.mjs app [--no-install]           the config, router and i18n wiring a new project
 //                                        needs, and the hosting profile's files if there is
@@ -22,13 +23,20 @@
 // _auth layout), /(marketing)/pricing (in the marketing group, served at /pricing).
 import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
 import { genMessages as say, genNext, glyph } from './strings.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
+
+const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
+
+// vite.mk's APP_DIR, read from the line in the project's Makefile that sets it.
+const appDir = read('.devtools/Makefile').match(/^APP_DIR\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
+const app = join(root, appDir)
+const workspace = appDir !== '.'
 
 const die = (message) => {
   console.error(`${glyph.fail} ${message}`)
@@ -51,8 +59,13 @@ const camel = (name) => {
   return p[0].toLowerCase() + p.slice(1)
 }
 
-/** Writes every file or none: one that already exists stops the run before anything is written. */
-function emit(files) {
+/**
+ * Writes every file or none: one that already exists stops the run before anything is written.
+ * Paths in `appFiles` are from APP_DIR, those in `repoFiles` from the repository's root.
+ */
+function emit(appFiles, repoFiles = {}) {
+  const files = { ...repoFiles }
+  for (const [path, contents] of Object.entries(appFiles)) files[join(appDir, path)] = contents
   const taken = Object.keys(files).filter((path) => existsSync(join(root, path)))
   if (taken.length > 0) die(say.refusing(taken))
   for (const [path, contents] of Object.entries(files)) {
@@ -76,21 +89,22 @@ function format(paths) {
 
 function run(command, args) {
   console.log(say.running(command, args))
-  const { status, error } = spawnSync(command, args, { cwd: root, stdio: 'inherit' })
+  const { status, error } = spawnSync(command, args, { cwd: app, stdio: 'inherit' })
   if (error || status !== 0) die(say.failed(command, args))
 }
 
-/** The project's name, slug and Node major, as init and mise.toml left them. */
+/**
+ * The project's name, slug and Node major, as init and mise.toml left them, and `repo`, the
+ * path from the app back to the repository's root.
+ */
 function project() {
-  const read = (path) =>
-    existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : ''
   // The starter README init writes is a heading and the one-line description.
   const readme = read('README.md')
   const slug = kebab(basename(root))
   const name = readme.match(/^# (.+)$/m)?.[1].trim() ?? pascal(slug)
   const description = readme.match(/^# .+\n+([^#\n].+)$/m)?.[1].trim() ?? name
   const nodeMajor = read('mise.toml').match(/^node = "(\d+)/m)?.[1] ?? '24'
-  return { slug, name, description, nodeMajor }
+  return { slug, name, description, nodeMajor, repo: relative(app, root) || '.' }
 }
 
 /**
@@ -109,14 +123,19 @@ async function hostScaffold() {
   return { files, dependencies, devDependencies, next }
 }
 
-function install(dependencies, devDependencies) {
-  if (dependencies.length > 0) run('pnpm', ['add', ...dependencies])
-  if (devDependencies.length > 0) run('pnpm', ['add', '--save-dev', ...devDependencies])
+/** `tools` are what .devtools/ imports, and Node resolves those upward from .devtools/. */
+function install(dependencies, devDependencies, tools) {
+  const add = (packages, flags) => {
+    if (packages.length > 0) run('pnpm', ['add', ...flags, ...packages])
+  }
+  add(dependencies, [])
+  add(devDependencies, ['--save-dev'])
+  add(tools, ['--save-dev', '--workspace-root'])
 }
 
 /** The languages the app has catalogs for, the default one if it has none yet. */
 function languages() {
-  const dir = join(root, 'src', 'locales')
+  const dir = join(app, 'src', 'locales')
   const found = existsSync(dir)
     ? readdirSync(dir, { withFileTypes: true }).filter((entry) => entry.isDirectory())
     : []
@@ -162,7 +181,7 @@ function ${Name}() {
       })
     } else {
       const k = kebab(feature)
-      if (!existsSync(join(root, `src/features/${k}/queries.ts`))) {
+      if (!existsSync(join(app, `src/features/${k}/queries.ts`))) {
         die(say.noFeature(k))
       }
       emit({
@@ -338,13 +357,16 @@ describe('use${P}', () => {
       next(genNext.hostNoInstall, ...host.next)
       return
     }
-    install(host.dependencies, host.devDependencies)
+    install(host.dependencies, [], host.devDependencies)
     format(written)
     next(genNext.check, ...host.next)
   },
 
   async app(_, { install: installing }) {
-    const { slug, name, description, nodeMajor } = project()
+    if (workspace && !/^packages:/m.test(read('pnpm-workspace.yaml'))) {
+      die(say.noWorkspace(appDir))
+    }
+    const { slug, name, description, nodeMajor, repo } = project()
     const quote = (text) => text.replaceAll('\\', '\\\\').replaceAll("'", "\\'")
     // Its files are written with the app's, so the first build already runs on the host.
     const host = (await hostScaffold()) ?? {
@@ -354,28 +376,34 @@ describe('use${P}', () => {
       next: []
     }
 
-    const written = emit({
-      ...host.files,
-      'package.json': `${JSON.stringify(
-        {
-          name: slug,
-          private: true,
-          type: 'module',
-          scripts: {
-            dev: 'vite',
-            build: 'vite build',
-            preview: 'vite preview',
-            test: 'vitest',
-            typecheck: 'tsc -b',
-            lint: 'eslint --max-warnings=0 .',
-            format: "prettier --write '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'",
-            gen: 'node .devtools/scripts/gen.mjs'
-          }
-        },
-        null,
-        2
-      )}\n`,
-      'tsconfig.json': `{
+    const manifest = (packageName, scripts) =>
+      `${JSON.stringify({ name: packageName, private: true, type: 'module', scripts }, null, 2)}\n`
+    const appScripts = {
+      dev: 'vite',
+      build: 'vite build',
+      preview: 'vite preview',
+      test: 'vitest',
+      typecheck: 'tsc -b'
+    }
+    const repoScripts = {
+      lint: 'eslint --max-warnings=0 .',
+      format: "prettier --write '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'",
+      gen: 'node .devtools/scripts/gen.mjs'
+    }
+    const manifests = workspace
+      ? {
+          [join(appDir, 'package.json')]: manifest(
+            `${slug}-${kebab(basename(appDir))}`,
+            appScripts
+          ),
+          'package.json': manifest(slug, repoScripts)
+        }
+      : { 'package.json': manifest(slug, { ...appScripts, ...repoScripts }) }
+
+    const written = emit(
+      {
+        ...host.files,
+        'tsconfig.json': `{
   "files": [],
   "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
   "compilerOptions": {
@@ -383,8 +411,8 @@ describe('use${P}', () => {
   }
 }
 `,
-      'tsconfig.app.json': `{
-  "extends": "./.devtools/vite/tsconfig.base.json",
+        'tsconfig.app.json': `{
+  "extends": "${repo}/.devtools/vite/tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
@@ -395,44 +423,33 @@ describe('use${P}', () => {
   "include": ["src"]
 }
 `,
-      'tsconfig.node.json': `{
-  "extends": "./.devtools/vite/tsconfig.base.json",
+        'tsconfig.node.json': `{
+  "extends": "${repo}/.devtools/vite/tsconfig.base.json",
   "compilerOptions": {
     "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
     "lib": ["ES2023"],
     "types": ["node"]
   },
-  "include": ["vite.config.ts", "vitest.config.ts", ".devtools/vite/*.ts", ".devtools/host/*.ts"]
+  "include": ["vite.config.ts", "vitest.config.ts", "${join(repo, '.devtools/vite/*.ts')}", "${join(repo, '.devtools/host/*.ts')}"]
 }
 `,
-      'vite.config.ts': `import { defineConfig } from 'vite'
+        'vite.config.ts': `import { defineConfig } from 'vite'
 
-import { app } from './.devtools/vite/vite.ts'
+import { app } from '${repo}/.devtools/vite/vite.ts'
 import { site } from './src/config/site.ts'
 
 // The hosting profile's plugin, if there is one, comes in through app().
 export default defineConfig(await app({ site }))
 `,
-      'vitest.config.ts': `import { defineConfig } from 'vitest/config'
+        'vitest.config.ts': `import { defineConfig } from 'vitest/config'
 
-import { projects } from './.devtools/vite/vitest.ts'
+import { projects } from '${repo}/.devtools/vite/vitest.ts'
 
 export default defineConfig({
   test: { projects: await projects() }
 })
 `,
-      'eslint.config.js': `import { defineConfig } from 'eslint/config'
-
-import { app } from './.devtools/vite/eslint.js'
-
-export default defineConfig([app])
-`,
-      '.prettierignore': `# Generated, or vendored: shadcn/ui keeps its upstream formatting so updates diff cleanly.
-src/routeTree.gen.ts
-src/components/ui/
-pnpm-lock.yaml
-`,
-      'index.html': `<!doctype html>
+        'index.html': `<!doctype html>
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
@@ -455,7 +472,7 @@ pnpm-lock.yaml
   </body>
 </html>
 `,
-      'src/config/site.ts': `// The one source of truth for the site's metadata: index.html takes it at build time,
+        'src/config/site.ts': `// The one source of truth for the site's metadata: index.html takes it at build time,
 // and the app imports it for page titles.
 export const site = {
   name: '${quote(name)}',
@@ -467,16 +484,16 @@ export const site = {
   locale: 'en_US'
 } as const
 `,
-      'src/index.css': `@import 'tailwindcss';
+        'src/index.css': `@import 'tailwindcss';
 `,
-      'src/lib/utils.ts': `import { clsx, type ClassValue } from 'clsx'
+        'src/lib/utils.ts': `import { clsx, type ClassValue } from 'clsx'
 import { twMerge } from 'tailwind-merge'
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 `,
-      'src/router.ts': `import type { QueryClient } from '@tanstack/react-query'
+        'src/router.ts': `import type { QueryClient } from '@tanstack/react-query'
 import { createRouter, type RouterHistory } from '@tanstack/react-router'
 
 import { routeTree } from './routeTree.gen'
@@ -499,7 +516,7 @@ declare module '@tanstack/react-router' {
   }
 }
 `,
-      'src/router.test.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+        'src/router.test.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
 import { render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
@@ -519,7 +536,7 @@ describe('router', () => {
   })
 })
 `,
-      'src/main.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+        'src/main.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { RouterProvider } from '@tanstack/react-router'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
@@ -539,7 +556,7 @@ createRoot(document.getElementById('root')!).render(
   </StrictMode>
 )
 `,
-      'src/routes/__root.tsx': `import type { QueryClient } from '@tanstack/react-query'
+        'src/routes/__root.tsx': `import type { QueryClient } from '@tanstack/react-query'
 import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
 
 export interface RouterContext {
@@ -554,7 +571,7 @@ function RootLayout() {
   return <Outlet />
 }
 `,
-      'src/routes/index.tsx': `import { createFileRoute } from '@tanstack/react-router'
+        'src/routes/index.tsx': `import { createFileRoute } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 
 import { site } from '@/config/site'
@@ -573,7 +590,7 @@ function HomeRoute() {
   )
 }
 `,
-      'src/i18n/config.ts': `import i18n from 'i18next'
+        'src/i18n/config.ts': `import i18n from 'i18next'
 import LanguageDetector from 'i18next-browser-languagedetector'
 import { initReactI18next } from 'react-i18next'
 
@@ -627,7 +644,7 @@ i18n.on('languageChanged', setLang)
 
 export default i18n
 `,
-      'src/i18n/locales.test.ts': `import { describe, expect, it } from 'vitest'
+        'src/i18n/locales.test.ts': `import { describe, expect, it } from 'vitest'
 
 import { defaultLanguage, resources } from './config'
 
@@ -654,18 +671,32 @@ describe('locales', () => {
   })
 })
 `,
-      'src/locales/en/common.json': `${JSON.stringify(
-        { home: { title: 'Welcome to {{name}}', description } },
-        null,
-        2
-      )}\n`,
-      'src/test/setup.ts': `import '@testing-library/jest-dom/vitest'
+        'src/locales/en/common.json': `${JSON.stringify(
+          { home: { title: 'Welcome to {{name}}', description } },
+          null,
+          2
+        )}\n`,
+        'src/test/setup.ts': `import '@testing-library/jest-dom/vitest'
 import '@/i18n/config'
 
 // jsdom lays nothing out, so it has no scrollTo for the router's scroll restoration to call.
 window.scrollTo = () => {}
+`
+      },
+      {
+        ...manifests,
+        'eslint.config.js': `import { defineConfig } from 'eslint/config'
+
+import { app } from './.devtools/vite/eslint.js'
+
+export default defineConfig([${workspace ? `{ basePath: '${appDir}', extends: [app] }` : 'app'}])
 `,
-      '.claude/launch.json': `{
+        '.prettierignore': `# Generated, or vendored: shadcn/ui keeps its upstream formatting so updates diff cleanly.
+${join(appDir, 'src/routeTree.gen.ts')}
+${join(appDir, 'src/components/ui/')}
+pnpm-lock.yaml
+`,
+        '.claude/launch.json': `{
   "version": "0.0.1",
   "configurations": [
     {
@@ -677,10 +708,11 @@ window.scrollTo = () => {}
   ]
 }
 `
-    })
+      }
+    )
 
     if (!installing) {
-      next(genNext.appNoInstall)
+      next(genNext.appNoInstall(appDir))
       return
     }
     install(
@@ -698,6 +730,15 @@ window.scrollTo = () => {}
         ...host.dependencies
       ],
       [
+        '@types/react',
+        '@types/react-dom',
+        '@testing-library/react',
+        '@testing-library/dom',
+        '@testing-library/jest-dom',
+        // The shadcn/ui CLI, so `pnpm exec shadcn` runs the version pnpm-lock.yaml pins.
+        'shadcn'
+      ],
+      [
         'vite',
         '@vitejs/plugin-react',
         '@tanstack/router-plugin',
@@ -705,14 +746,9 @@ window.scrollTo = () => {}
         '@tailwindcss/vite',
         // typescript-eslint supports TypeScript below 6.1.
         'typescript@~6.0.3',
-        '@types/react',
-        '@types/react-dom',
         `@types/node@^${nodeMajor}`,
         'vitest',
         'jsdom',
-        '@testing-library/react',
-        '@testing-library/dom',
-        '@testing-library/jest-dom',
         'eslint',
         '@eslint/js',
         'typescript-eslint',
@@ -724,15 +760,13 @@ window.scrollTo = () => {}
         '@tanstack/eslint-plugin-router',
         'eslint-plugin-i18next',
         'prettier',
-        // The shadcn/ui CLI, so `pnpm exec shadcn` runs the version pnpm-lock.yaml pins.
-        'shadcn',
         ...host.devDependencies
       ]
     )
     // The first build writes src/routeTree.gen.ts, which the router and the types import.
     run('pnpm', ['exec', 'vite', 'build'])
     format(written)
-    next(genNext.check, genNext.shadcn, genNext.commit, ...host.next)
+    next(genNext.check, genNext.shadcn(appDir), genNext.commit, ...host.next)
   }
 }
 
