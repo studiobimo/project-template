@@ -42,8 +42,33 @@ than one feature uses moves up to `components/`, `hooks/` or `lib/`.
 
 In a workspace the app sits in `APP_DIR`, which `.devtools/Makefile` sets, and the layout above
 is inside it. Its `package.json` lists what the app imports. The root's lists the tools that
-`.devtools/` imports, since those resolve from the root. `eslint.config.js` and
-`.prettierignore` stay at the root. Run `pnpm exec shadcn` from `APP_DIR`.
+`.devtools/` imports, since those resolve from the root. `.prettierignore` stays at the root.
+Run `pnpm exec shadcn` from `APP_DIR`.
+
+Every other package brings its own `eslint.config.js` and `vitest.config.ts`, on the shared
+`base` of each, and adds what only it needs. ESLint uses the nearest config to each file, and
+`make -C .devtools test` runs every package that has a Vitest config. `tsc` reaches a package
+through its imports; for the rest, give it a `tsconfig.json` that extends
+`.devtools/vite/tsconfig.base.json` and add it to `TSC_PROJECTS` in `.devtools/Makefile`, after
+`include vite.mk`, as `../../packages/<name>`.
+
+```js
+// packages/<name>/eslint.config.js
+import { defineConfig } from 'eslint/config'
+
+import { base } from '../../.devtools/vite/eslint.js'
+
+export default defineConfig([base, { rules: {} }])
+```
+
+```ts
+// packages/<name>/vitest.config.ts
+import { defineConfig, mergeConfig } from 'vitest/config'
+
+import { base } from '../../.devtools/vite/vitest.ts'
+
+export default mergeConfig(base, defineConfig({ test: {} }))
+```
 
 ### Conventions
 

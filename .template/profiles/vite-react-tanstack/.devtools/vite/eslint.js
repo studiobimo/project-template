@@ -5,8 +5,8 @@
 //
 //   export default defineConfig([app, { files: ['src/**/*.tsx'], rules: { ... } }])
 //
-// It sits at the repository's root even in a workspace, where basePath scopes these rules to
-// the app: defineConfig([{ basePath: 'apps/web', extends: [app] }]).
+// `app` is the React app's. `base` is what any other workspace package extends the same way,
+// from an eslint.config.js of its own: ESLint uses the nearest one to each file.
 import { existsSync } from 'node:fs'
 
 import js from '@eslint/js'
@@ -23,13 +23,25 @@ import tseslint from 'typescript-eslint'
 const hostConfig = new URL('../host/eslint.js', import.meta.url)
 const host = existsSync(hostConfig) ? (await import(hostConfig.href)).default : []
 
+export const base = defineConfig([
+  globalIgnores(['dist', 'coverage']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [js.configs.recommended, tseslint.configs.recommended]
+  },
+  {
+    files: ['**/*.{js,mjs}', '*.config.ts', '.devtools/**/*.ts'],
+    extends: [js.configs.recommended],
+    languageOptions: { globals: globals.node }
+  }
+])
+
 export const app = defineConfig([
-  globalIgnores(['dist', 'coverage', 'src/routeTree.gen.ts']),
+  base,
+  globalIgnores(['src/routeTree.gen.ts']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
-      js.configs.recommended,
-      tseslint.configs.recommended,
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
       pluginQuery.configs['flat/recommended'],
@@ -76,11 +88,6 @@ export const app = defineConfig([
         }
       ]
     }
-  },
-  {
-    files: ['**/*.{js,mjs}', '*.config.ts', '.devtools/**/*.ts'],
-    extends: [js.configs.recommended],
-    languageOptions: { globals: globals.node }
   },
   ...host
 ])
