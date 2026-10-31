@@ -5,7 +5,8 @@
 The `gcp` profile keeps this section, `.devtools/host/` and `deploy.yml` in step with the
 template. The shared Vite, Vitest, ESLint and make configs load their Cloud Run parts from
 there, so the project's own config files never name the host. `Dockerfile`, `.gcloudignore`,
-`server/` and `infra/` are the project's.
+`server/` and `infra/` are the project's. In a workspace `server/` sits in `APP_DIR` and the
+others stay at the root, where the `Dockerfile` copies `<APP_DIR>/dist` into the image.
 
 - **One service serves the app.** `server/site.ts` answers `/api/*` with the Hono app in
   `server/app.ts` and serves the client from `dist/client`; any other path gets
@@ -45,5 +46,6 @@ there, so the project's own config files never name the host. `Dockerfile`, `.gc
 - **Server tests** sit beside the code as `server/**/*.test.ts` and call
   `app.request(path)` in Node.
 - **One schema per concept** holds across the boundary: a route validates its input with
-  the feature's schema from `src/features/<name>/schema.ts`.
+  the feature's schema from `src/features/<name>/schema.ts`, or from a workspace's shared
+  package.
 <!-- <<< template:gcp -->

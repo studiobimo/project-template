@@ -234,7 +234,7 @@ expect 1 "fails a chunk over its budget" budget --chunk-kib 0
 echo "vite-react-tanstack in an app directory"
 generated() {
     copy "$1"
-    printf 'vite-react-tanstack\ncloudflare\n' >"$1/.template-profiles"
+    printf 'vite-react-tanstack\n%s\n' "${2:-cloudflare}" >"$1/.template-profiles"
     in_repo "$1" .devtools/scripts/template-sync.sh --from "${src}" --ref v9.9.9 >/dev/null
 }
 gen_in() { (cd "$1" && shift && mise exec -- node .devtools/scripts/gen.mjs "$@"); }
@@ -280,6 +280,24 @@ expect 0 "with one package.json" grep -qF '"gen": "node .devtools/scripts/gen.mj
 expect 0 "the configs as they were" grep -qF 'defineConfig([app])' "${flat}/eslint.config.js"
 expect 0 "and the paths" grep -qF "'./.devtools/vite/vite.ts'" "${flat}/vite.config.ts"
 expect 0 "Worker's included" grep -qF '"../.devtools/vite/tsconfig.base.json"' "${flat}/worker/tsconfig.json"
+
+run="${work}/run-shop"
+generated "${run}" gcp
+printf 'APP_DIR := apps/web\n' >>"${run}/.devtools/Makefile"
+cp "${work}/workspace" "${run}/pnpm-workspace.yaml"
+expect 0 "writes the Cloud Run server into APP_DIR" gen_in "${run}" app --no-install
+expect 0 "reaching the shared tsconfig from there" \
+    grep -qF '"../../../.devtools/vite/tsconfig.base.json"' "${run}/apps/web/server/tsconfig.json"
+expect 0 "and keeps what deploys it at the root" test -f "${run}/infra/main.tf"
+expect 0 "with an image of the app's build" grep -qx 'COPY apps/web/dist ./dist' "${run}/Dockerfile"
+expect 0 "and that build let back in, parent by parent" \
+    grep -qx '!/apps/web/dist/' "${run}/.gcloudignore"
+expect 0 "from the first of them" grep -qx '/apps/\*' "${run}/.gcloudignore"
+flat_run="${work}/flat-run"
+generated "${flat_run}" gcp
+expect 0 "and without APP_DIR the server stays at the root" gen_in "${flat_run}" app --no-install
+expect 0 "with the image as it was" grep -qx 'COPY dist ./dist' "${flat_run}/Dockerfile"
+expect 0 "and the upload" grep -qx '!/dist/' "${flat_run}/.gcloudignore"
 
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"

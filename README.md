@@ -102,8 +102,9 @@ manages and what stays per project.
   node .devtools/scripts/gen.mjs route '/invoices/$invoiceId'
   ```
 
-  For a pnpm workspace, tell it where the app lives before running `gen.mjs app`. It then writes
-  the app there, and the shared tools to a `package.json` at the root:
+  For a pnpm workspace, with either hosting profile below, tell it where the app lives before
+  running `gen.mjs app`. It then writes the app there, and the shared tools to a `package.json`
+  at the root:
 
   ```make
   # .devtools/Makefile
@@ -129,8 +130,6 @@ manages and what stays per project.
   make -C .devtools sync
   node .devtools/scripts/gen.mjs host         # wrangler.jsonc and worker/, then the packages
   ```
-
-  It works with the app in a workspace's `APP_DIR`; `gcp` needs the app at the root.
 
 - **`gcp`**, the same for Google Cloud Run: one service, a Hono server on Node bundled into
   `dist/server`, serves the client and answers `/api/*`. OpenTofu in `infra/` sets up the

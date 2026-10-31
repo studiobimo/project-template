@@ -94,8 +94,8 @@ function run(command, args) {
 }
 
 /**
- * The project's name, slug and Node major, as init and mise.toml left them, and `repo`, the
- * path from the app back to the repository's root.
+ * The project's name, slug and Node major, as init and mise.toml left them, with `appDir` and
+ * `repo`, the path from the app back to the repository's root.
  */
 function project() {
   // The starter README init writes is a heading and the one-line description.
@@ -104,23 +104,24 @@ function project() {
   const name = readme.match(/^# (.+)$/m)?.[1].trim() ?? pascal(slug)
   const description = readme.match(/^# .+\n+([^#\n].+)$/m)?.[1].trim() ?? name
   const nodeMajor = read('mise.toml').match(/^node = "(\d+)/m)?.[1] ?? '24'
-  return { slug, name, description, nodeMajor, repo: relative(app, root) || '.' }
+  return { slug, name, description, nodeMajor, appDir, repo: relative(app, root) || '.' }
 }
 
 /**
  * What the hosting profile's .devtools/host/scaffold.mjs writes and installs: its default
- * export takes project() and returns { files, dependencies, devDependencies, next }.
+ * export takes project() and returns { files, repoFiles, dependencies, devDependencies, next }.
  */
 async function hostScaffold() {
   const path = join(root, '.devtools', 'host', 'scaffold.mjs')
   if (!existsSync(path)) return undefined
   const {
     files = {},
+    repoFiles = {},
     dependencies = [],
     devDependencies = [],
     next = []
   } = (await import(pathToFileURL(path).href)).default(project())
-  return { files, dependencies, devDependencies, next }
+  return { files, repoFiles, dependencies, devDependencies, next }
 }
 
 /** `tools` are what .devtools/ imports, and Node resolves those upward from .devtools/. */
@@ -352,7 +353,7 @@ describe('use${P}', () => {
     if (!host) {
       die(say.noHost)
     }
-    const written = emit(host.files)
+    const written = emit(host.files, host.repoFiles)
     if (!installing) {
       next(genNext.hostNoInstall, ...host.next)
       return
@@ -371,6 +372,7 @@ describe('use${P}', () => {
     // Its files are written with the app's, so the first build already runs on the host.
     const host = (await hostScaffold()) ?? {
       files: {},
+      repoFiles: {},
       dependencies: [],
       devDependencies: [],
       next: []
@@ -692,6 +694,7 @@ window.scrollTo = () => {}
 `
       },
       {
+        ...host.repoFiles,
         ...manifests,
         '.prettierignore': `# Generated, or vendored: shadcn/ui keeps its upstream formatting so updates diff cleanly.
 ${join(appDir, 'src/routeTree.gen.ts')}

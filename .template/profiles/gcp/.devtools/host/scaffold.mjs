@@ -2,10 +2,24 @@
 //
 // The project's own Cloud Run files and packages, for `gen.mjs host` (or `gen.mjs app`) to
 // write and install. Once written they are the project's: sync never compares them.
+//
+// What deploys the repository stays at its root, in a workspace too: repoFiles.
+import { join } from 'node:path'
 
-export default ({ slug }) => ({
+/** The .gcloudignore lines for a directory, which only count once each parent is let back in. */
+const uploadOnly = (path) =>
+  path
+    .split('/')
+    .flatMap((_, depth, parts) => {
+      const dir = parts.slice(0, depth + 1).join('/')
+      return depth < parts.length - 1 ? [`!/${dir}/`, `/${dir}/*`] : [`!/${dir}/`]
+    })
+    .join('\n')
+
+export default ({ slug, appDir, repo }) => ({
   dependencies: ['hono', '@hono/node-server'],
-  devDependencies: [],
+  // .devtools/host/vite.ts imports them, and Node resolves that upward from .devtools/.
+  devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
   next: [
     'edit infra/project.auto.tfvars.json   # the GCP project, region, repository, billing account, budget',
     'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
@@ -14,32 +28,8 @@ export default ({ slug }) => ({
     'make -C .devtools deploy ENV=staging  # <service>-staging, from this machine'
   ],
   files: {
-    Dockerfile: `# Cloud Build builds this from what \`make -C .devtools build\` left in dist/: .gcloudignore
-# sends it nothing else. The server is one bundled file, so the image is Node and dist/,
-# with no shell, no package manager and no node_modules.
-#
-# Node is the exact release mise.toml pins, taken from the official image and run on
-# distroless: distroless's own Node images name only the major version. make check fails
-# when the two differ, so a Dependabot bump of this tag lands with the mise.toml one.
-FROM node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS node
-
-FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
-COPY --from=node /usr/local/bin/node /usr/local/bin/node
-WORKDIR /app
-COPY dist ./dist
-ENV NODE_ENV=production
-ENTRYPOINT ["/usr/local/bin/node"]
-CMD ["--enable-source-maps", "dist/server/index.mjs"]
-`,
-    '.gcloudignore': `# What \`gcloud run deploy --source\` uploads to Cloud Build: the Dockerfile and dist/, which
-# \`make -C .devtools build\` writes first. Nothing else, so no source, no .env and no
-# credentials file goes with it.
-/*
-!/Dockerfile
-!/dist/
-`,
     'server/tsconfig.json': `{
-  "extends": "../.devtools/vite/tsconfig.base.json",
+  "extends": "${join('..', repo, '.devtools/vite/tsconfig.base.json')}",
   "compilerOptions": {
     "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.server.tsbuildinfo",
     "lib": ["ES2024"],
@@ -198,6 +188,32 @@ const server = serve({ fetch: app.fetch, port }, () => console.log(\`listening o
 // Cloud Run sends SIGTERM and waits ten seconds before it stops the instance: finish the
 // requests in flight, then exit.
 process.on('SIGTERM', () => server.close(() => process.exit(0)))
+`
+  },
+  repoFiles: {
+    Dockerfile: `# Cloud Build builds this from what \`make -C .devtools build\` left in dist/: .gcloudignore
+# sends it nothing else. The server is one bundled file, so the image is Node and dist/,
+# with no shell, no package manager and no node_modules.
+#
+# Node is the exact release mise.toml pins, taken from the official image and run on
+# distroless: distroless's own Node images name only the major version. make check fails
+# when the two differ, so a Dependabot bump of this tag lands with the mise.toml one.
+FROM node:24.21.0-trixie-slim@sha256:173f125896c3b47ddf056734c7ea789d04595a6a08769a8f78e0df642781fb66 AS node
+
+FROM gcr.io/distroless/cc-debian13:nonroot@sha256:3ee00291cf386ec52a552e6a858d555debd74776eb4bfa53fa3df2cd6677515e
+COPY --from=node /usr/local/bin/node /usr/local/bin/node
+WORKDIR /app
+COPY ${join(appDir, 'dist')} ./dist
+ENV NODE_ENV=production
+ENTRYPOINT ["/usr/local/bin/node"]
+CMD ["--enable-source-maps", "dist/server/index.mjs"]
+`,
+    '.gcloudignore': `# What \`gcloud run deploy --source\` uploads to Cloud Build: the Dockerfile and dist/, which
+# \`make -C .devtools build\` writes first. Nothing else, so no source, no .env and no
+# credentials file goes with it.
+/*
+!/Dockerfile
+${uploadOnly(join(appDir, 'dist'))}
 `,
     'infra/project.auto.tfvars.json': `{
   "project": "${slug}",
