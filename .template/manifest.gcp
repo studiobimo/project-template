@@ -4,15 +4,15 @@
 # .template-profiles, after vite-react-tanstack. Same syntax as .template/manifest, but every
 # path is read from .template/profiles/gcp/ rather than from the template's root.
 #
-# It needs the app at the repository's root: host.mk stops on any other APP_DIR. Most of what
-# it manages is in .devtools/host/, which the vite-react-tanstack profile's
+# Most of what it manages is in .devtools/host/, which the vite-react-tanstack profile's
 # shared configs load when it exists: its Vite plugin and server build, its Vitest project,
 # its ESLint rules and its make targets. Nothing in the project's own config files names the
 # host, so a project lists one hosting profile at a time. Moving to another is a swap of
 # names in .template-profiles, `rm -r .devtools/host`, and a sync.
 #
-# Per project, and not listed: Dockerfile, .gcloudignore, everything under server/ and
-# infra/, and the job in release.yml that deploys a release (deploy.yml shows it).
+# Per project, and not listed: everything under server/, in APP_DIR; the Dockerfile,
+# .gcloudignore and everything under infra/, at the root; and the job in release.yml that
+# deploys a release (deploy.yml shows it).
 # `node .devtools/scripts/gen.mjs host` writes a first version of them and installs the
 # packages; `gen.mjs app` does the same when the profile is there first.
 
