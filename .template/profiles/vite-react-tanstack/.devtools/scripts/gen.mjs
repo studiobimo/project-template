@@ -390,13 +390,20 @@ describe('use${P}', () => {
       format: "prettier --write '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'",
       gen: 'node .devtools/scripts/gen.mjs'
     }
+    const eslintConfig = (path, rules) => `import { defineConfig } from 'eslint/config'
+
+import { ${rules} } from '${path}/.devtools/vite/eslint.js'
+
+export default defineConfig([${rules}])
+`
     const manifests = workspace
       ? {
           [join(appDir, 'package.json')]: manifest(
             `${slug}-${kebab(basename(appDir))}`,
             appScripts
           ),
-          'package.json': manifest(slug, repoScripts)
+          'package.json': manifest(slug, repoScripts),
+          'eslint.config.js': eslintConfig('.', 'base')
         }
       : { 'package.json': manifest(slug, { ...appScripts, ...repoScripts }) }
 
@@ -449,6 +456,7 @@ export default defineConfig({
   test: { projects: await projects() }
 })
 `,
+        'eslint.config.js': eslintConfig(repo, 'app'),
         'index.html': `<!doctype html>
 <html lang="en">
   <head>
@@ -685,12 +693,6 @@ window.scrollTo = () => {}
       },
       {
         ...manifests,
-        'eslint.config.js': `import { defineConfig } from 'eslint/config'
-
-import { app } from './.devtools/vite/eslint.js'
-
-export default defineConfig([${workspace ? `{ basePath: '${appDir}', extends: [app] }` : 'app'}])
-`,
         '.prettierignore': `# Generated, or vendored: shadcn/ui keeps its upstream formatting so updates diff cleanly.
 ${join(appDir, 'src/routeTree.gen.ts')}
 ${join(appDir, 'src/components/ui/')}
