@@ -16,8 +16,9 @@
 #
 # In a pnpm workspace those files sit in the app's directory: set APP_DIR in .devtools/Makefile
 # above `include vite.mk`, and list it under a packages: key above the block in
-# pnpm-workspace.yaml. eslint.config.js, .prettierignore and a package.json for the shared
-# tools stay at the root.
+# pnpm-workspace.yaml. .prettierignore stays at the root, beside a package.json for the shared
+# tools and an eslint.config.js for what no package covers. Every other package extends the
+# `base` of .devtools/vite/eslint.js and .devtools/vite/vitest.ts from configs of its own.
 #
 # Adding the profile to a project: `include vite.mk` from .devtools/Makefile, after
 # base.mk, and remove the Makefile's own `clean` recipe. If the project already has the

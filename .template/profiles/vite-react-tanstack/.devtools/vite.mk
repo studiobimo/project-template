@@ -58,8 +58,8 @@ build: ## Production build; fails if it had to rewrite a stale src/routeTree.gen
 preview: build ## Serve the production build locally
 	$(APP_PNPM) exec vite preview
 
-test: ## Unit tests, once
-	$(APP_PNPM) exec vitest run
+test: ## Unit tests, once, in every package with a vitest.config.ts
+	$(PNPM) --recursive exec sh -c '[ ! -f vitest.config.ts ] || vitest run'
 
 typecheck: ## Type-check every tsconfig project reference
 	$(APP_PNPM) exec tsc -b $(TSC_PROJECTS)

@@ -262,8 +262,10 @@ expect 0 "and the shared tsconfig" \
     grep -qF '"../../.devtools/vite/tsconfig.base.json"' "${shop}/apps/web/tsconfig.app.json"
 expect 0 "from the Worker's too" \
     grep -qF '"../../../.devtools/vite/tsconfig.base.json"' "${shop}/apps/web/worker/tsconfig.json"
-expect 0 "keeps ESLint at the root, scoped to the app" \
-    grep -qF "basePath: 'apps/web'" "${shop}/eslint.config.js"
+expect 0 "and the shared ESLint rules" \
+    grep -qF "{ app } from '../../.devtools/vite/eslint.js'" "${shop}/apps/web/eslint.config.js"
+expect 0 "keeps a config at the root for what no package covers" \
+    grep -qF "{ base } from './.devtools/vite/eslint.js'" "${shop}/eslint.config.js"
 expect 0 "and Prettier's ignores" grep -qx 'apps/web/src/routeTree.gen.ts' "${shop}/.prettierignore"
 expect 0 "and the launch config" test -f "${shop}/.claude/launch.json"
 expect 0 "writes later files into APP_DIR too" gen_in "${shop}" feature invoices
