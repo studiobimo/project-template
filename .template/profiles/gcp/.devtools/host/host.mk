@@ -1,10 +1,6 @@
 # Managed by studiobimo/project-template (profile gcp); change it there.
 # vite.mk includes it. Cloud Run's own targets, and its part of the shared ones.
 
-ifneq ($(APP_DIR),.)
-$(error $(GLYPH_FAIL) the gcp profile only runs an app at the repository's root, not in $(APP_DIR))
-endif
-
 # The client builds into dist/client and the server, bundled into one file, into
 # dist/server. Only the client is downloaded by browsers, so only it has a budget.
 BUNDLE_DIR := dist/client
@@ -28,10 +24,10 @@ build: build-server
 ci: node-image-check infra-fmt-check
 
 build-server: ## Bundle server/index.ts and what it imports into dist/server/index.mjs
-	$(PNPM) exec vite build --config .devtools/host/server.ts
+	$(APP_PNPM) exec vite build --config $(ROOT)/.devtools/host/server.ts
 
 start: build ## Run the production build as Cloud Run runs it, on PORT or 8080
-	cd $(ROOT) && $(MISE) exec -- node --enable-source-maps dist/server/index.mjs
+	$(APP_CD) && $(MISE) exec -- node --enable-source-maps dist/server/index.mjs
 
 # The image copies Node from the official image's exact tag; mise.toml pins the Node that
 # builds and tests the app. They change together, so production runs what was tested.
