@@ -10,9 +10,9 @@
 # project lists one hosting profile at a time, and moving to another is a swap of names in
 # .template-profiles and a sync.
 #
-# Per project, and not listed: wrangler.jsonc, .dev.vars.example, everything under worker/,
-# and the job in release.yml that deploys a release (deploy.yml shows it). `node
-# .devtools/scripts/gen.mjs host` writes a first version of the files and installs the
+# Per project, and not listed: wrangler.jsonc, .dev.vars.example and everything under worker/,
+# all in APP_DIR, and the job in release.yml that deploys a release (deploy.yml shows it).
+# `node .devtools/scripts/gen.mjs host` writes a first version of the files and installs the
 # packages; `gen.mjs app` does the same when the profile is there first.
 
 file  .devtools/host/host.mk

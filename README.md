@@ -102,6 +102,21 @@ manages and what stays per project.
   node .devtools/scripts/gen.mjs route '/invoices/$invoiceId'
   ```
 
+  For a pnpm workspace, tell it where the app lives before running `gen.mjs app`. It then writes
+  the app there, and the shared tools to a `package.json` at the root:
+
+  ```make
+  # .devtools/Makefile
+  APP_DIR := apps/web   # above `include vite.mk`
+  ```
+
+  ```yaml
+  # pnpm-workspace.yaml, above the vite block
+  packages:
+    - apps/*
+    - packages/*
+  ```
+
 - **`cloudflare`**, a hosting profile for a `vite-react-tanstack` app: one Worker serves the
   client and answers `/api/*` with Hono, with its tests, types, a deploy target that builds
   for the environment it deploys to, and a workflow that runs it for `main` (staging) and
@@ -114,6 +129,8 @@ manages and what stays per project.
   make -C .devtools sync
   node .devtools/scripts/gen.mjs host         # wrangler.jsonc and worker/, then the packages
   ```
+
+  It works with the app in a workspace's `APP_DIR`; `gcp` needs the app at the root.
 
 - **`gcp`**, the same for Google Cloud Run: one service, a Hono server on Node bundled into
   `dist/server`, serves the client and answers `/api/*`. OpenTofu in `infra/` sets up the

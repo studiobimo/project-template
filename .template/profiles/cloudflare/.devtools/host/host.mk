@@ -1,7 +1,7 @@
 # Managed by studiobimo/project-template (profile cloudflare); change it there.
 # vite.mk includes it. Cloudflare's own targets, and its part of the shared ones.
 
-WRANGLER := $(PNPM) exec wrangler
+WRANGLER := $(APP_PNPM) exec wrangler
 
 # The plugin builds the client into dist/client and the Worker beside it. Only the client
 # is downloaded by browsers, so only it has a budget.

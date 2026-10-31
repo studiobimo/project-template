@@ -231,6 +231,54 @@ mkdir -p "${vite}/dist/assets" && echo 'console.log(1)' >"${vite}/dist/assets/ap
 expect 0 "passes a bundle within its budget" budget
 expect 1 "fails a chunk over its budget" budget --chunk-kib 0
 
+echo "vite-react-tanstack in an app directory"
+generated() {
+    copy "$1"
+    printf 'vite-react-tanstack\ncloudflare\n' >"$1/.template-profiles"
+    in_repo "$1" .devtools/scripts/template-sync.sh --from "${src}" --ref v9.9.9 >/dev/null
+}
+gen_in() { (cd "$1" && shift && mise exec -- node .devtools/scripts/gen.mjs "$@"); }
+shop="${work}/acme-shop"
+generated "${shop}"
+printf 'APP_DIR := apps/web\n' >>"${shop}/.devtools/Makefile"
+printf '# Acme Shop\n\nSells things.\n' >"${shop}/README.md"
+expect 1 "refuses an app the workspace does not list" gen_in "${shop}" app --no-install
+expect 1 "and writes nothing" test -e "${shop}/eslint.config.js"
+{ printf 'packages:\n  - apps/*\n\n'; cat "${shop}/pnpm-workspace.yaml"; } >"${work}/workspace"
+cp "${work}/workspace" "${shop}/pnpm-workspace.yaml"
+expect 0 "a packages: key above the blocks is in step" \
+    in_repo "${shop}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
+expect 0 "writes the app into APP_DIR" gen_in "${shop}" app --no-install
+expect 0 "with the host's files beside it" test -f "${shop}/apps/web/worker/index.ts"
+expect 0 "naming the Worker after the repository, not the app" \
+    grep -qF '"name": "acme-shop"' "${shop}/apps/web/wrangler.jsonc"
+expect 0 "and the app's package after both" \
+    grep -qF '"name": "acme-shop-web"' "${shop}/apps/web/package.json"
+expect 0 "reading the description from the repository's README" \
+    grep -qF "description: 'Sells things.'" "${shop}/apps/web/src/config/site.ts"
+expect 0 "reaching the shared Vite config from there" \
+    grep -qF "'../../.devtools/vite/vite.ts'" "${shop}/apps/web/vite.config.ts"
+expect 0 "and the shared tsconfig" \
+    grep -qF '"../../.devtools/vite/tsconfig.base.json"' "${shop}/apps/web/tsconfig.app.json"
+expect 0 "from the Worker's too" \
+    grep -qF '"../../../.devtools/vite/tsconfig.base.json"' "${shop}/apps/web/worker/tsconfig.json"
+expect 0 "keeps ESLint at the root, scoped to the app" \
+    grep -qF "basePath: 'apps/web'" "${shop}/eslint.config.js"
+expect 0 "and Prettier's ignores" grep -qx 'apps/web/src/routeTree.gen.ts' "${shop}/.prettierignore"
+expect 0 "and the launch config" test -f "${shop}/.claude/launch.json"
+expect 0 "writes later files into APP_DIR too" gen_in "${shop}" feature invoices
+expect 0 "beside the catalogs it found there" test -f "${shop}/apps/web/src/locales/en/invoices.json"
+expect 0 "and routes that load them" gen_in "${shop}" route /invoices --feature invoices
+expect 0 "at the app's own path" test -f "${shop}/apps/web/src/routes/invoices.tsx"
+
+flat="${work}/flat-shop"
+generated "${flat}"
+expect 0 "without APP_DIR the app stays at the root" gen_in "${flat}" app --no-install
+expect 0 "with one package.json" grep -qF '"gen": "node .devtools/scripts/gen.mjs"' "${flat}/package.json"
+expect 0 "the configs as they were" grep -qF 'defineConfig([app])' "${flat}/eslint.config.js"
+expect 0 "and the paths" grep -qF "'./.devtools/vite/vite.ts'" "${flat}/vite.config.ts"
+expect 0 "Worker's included" grep -qF '"../.devtools/vite/tsconfig.base.json"' "${flat}/worker/tsconfig.json"
+
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
 expect 2 "an unknown flag is an error" .devtools/scripts/template-sync.sh --nope

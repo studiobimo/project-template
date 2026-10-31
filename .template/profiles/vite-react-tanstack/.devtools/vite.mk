@@ -6,16 +6,23 @@
 
 PNPM := cd $(ROOT) && $(MISE) exec -- pnpm
 
+# The app's directory, from the repository's root. A workspace sets it in Makefile, above the
+# line that includes this file.
+APP_DIR ?= .
+APP_CD := cd $(ROOT)/$(APP_DIR)
+APP_PNPM := $(APP_CD) && $(MISE) exec -- pnpm
+
 # The bundle budget. Raise a number in the project's Makefile, in the same pull request as
 # the change that needs it, so the growth is reviewed rather than discovered.
 BUNDLE_DIR ?= dist
 BUNDLE_CHUNK_KIB ?= 450
 BUNDLE_TOTAL_KIB ?= 550
 
-# The tsc -b projects: the root tsconfig.json, which references the app's and the configs'.
+# The tsc -b projects, from APP_DIR: its tsconfig.json references the app's and the configs'.
 TSC_PROJECTS := .
 
-# Prettier only formats the web sources. Markdown, YAML and JSON belong to the shared
+# Prettier and ESLint run from the root, as the hooks do, so they cover a workspace's every
+# package. Prettier only formats the web sources. Markdown, YAML and JSON belong to the shared
 # hooks, and many of those files are managed: formatting them here would be drift.
 PRETTIER_FILES := '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
 
@@ -36,12 +43,12 @@ install: ## Install the packages pnpm-lock.yaml pins
 	$(PNPM) install --frozen-lockfile
 
 dev: ## Vite dev server
-	$(PNPM) exec vite
+	$(APP_PNPM) exec vite
 
 # The router plugin regenerates src/routeTree.gen.ts on every build. If that changed the
 # committed file, the route tree in git was stale: fail, so the new one gets committed.
 build: ## Production build; fails if it had to rewrite a stale src/routeTree.gen.ts
-	@cd $(ROOT) && before="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
+	@$(APP_CD) && before="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
 		&& $(MISE) exec -- pnpm exec vite build \
 		&& after="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
 		&& if [ "$${before}" != "$${after}" ]; then \
@@ -49,13 +56,13 @@ build: ## Production build; fails if it had to rewrite a stale src/routeTree.gen
 		fi
 
 preview: build ## Serve the production build locally
-	$(PNPM) exec vite preview
+	$(APP_PNPM) exec vite preview
 
 test: ## Unit tests, once
-	$(PNPM) exec vitest run
+	$(APP_PNPM) exec vitest run
 
 typecheck: ## Type-check every tsconfig project reference
-	$(PNPM) exec tsc -b $(TSC_PROJECTS)
+	$(APP_PNPM) exec tsc -b $(TSC_PROJECTS)
 
 eslint: ## ESLint over the whole tree, warnings included
 	$(PNPM) exec eslint --max-warnings=0 .
@@ -67,7 +74,7 @@ fmt-check: ## Fail on web sources Prettier would change
 	$(PNPM) exec prettier --check --log-level=warn $(PRETTIER_FILES)
 
 budget: ## Fail if a client chunk or the whole bundle outgrows its budget (after build)
-	cd $(ROOT) && $(MISE) exec -- node .devtools/scripts/bundle-budget.mjs \
+	$(APP_CD) && $(MISE) exec -- node $(ROOT)/.devtools/scripts/bundle-budget.mjs \
 		--dir $(BUNDLE_DIR) --chunk-kib $(BUNDLE_CHUNK_KIB) --total-kib $(BUNDLE_TOTAL_KIB)
 
 audit: ## Fail on high or critical advisories in the packages that ship
@@ -83,6 +90,6 @@ lock: lock-tools ## Refresh every lockfile after a version change
 	$(PNPM) install
 
 clean: ## Remove build outputs
-	cd $(ROOT) && rm -rf dist coverage node_modules/.tmp node_modules/.vite
+	$(APP_CD) && rm -rf dist coverage node_modules/.tmp node_modules/.vite
 
 -include $(ROOT)/.devtools/host/host.mk
