@@ -47,6 +47,9 @@ violation is caught before it is reviewed.
   `<type>(<scope>): <summary>`. PRs are squash-merged, so the **PR title** must be one too.
   commitlint checks both against its conventional config: a lowercase summary with no full stop,
   at most 100 characters in the header and in each body line, and a scope from the project's list.
+- **Issues:** titled the same way, like the commit that will close them: `fix: …`, `feat: …`,
+  `docs: …`. The issue forms start the title with a type, and the `issue-title` workflow labels
+  and comments on any issue whose title fails commitlint until it is fixed.
 - **Branches:** [Conventional Branch](https://conventionalbranch.org/), `<type>/<description>`
   in lowercase with single hyphens, e.g. `feat/short-description`. Agents may use `claude/…` or
   `codex/…`.

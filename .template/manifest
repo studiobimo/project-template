@@ -32,6 +32,7 @@ file  .markdownlint-cli2.yaml
 file  .github/zizmor.yml
 file  .github/workflows/pr-checks.yml           required
 file  .github/workflows/template-drift.yml      required
+file  .github/workflows/issue-title.yml         required
 
 block .gitignore              base
 block .gitattributes          base
