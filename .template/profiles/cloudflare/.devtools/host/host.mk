@@ -21,7 +21,6 @@ typecheck: types
 # deploys what dist/ says. Building and deploying in one target is what keeps a staging
 # build from going out under the production name.
 deploy: ## Build for ENV (staging or production) and deploy it
-	@case "$(ENV)" in staging|production) ;; \
-		*) echo "✖ usage: make -C .devtools deploy ENV=staging|production" >&2; exit 1 ;; esac
+	$(require-deploy-env)
 	CLOUDFLARE_ENV=$(ENV) $(MAKE) --no-print-directory build
 	$(WRANGLER) deploy

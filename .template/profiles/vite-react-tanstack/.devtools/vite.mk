@@ -19,6 +19,17 @@ TSC_PROJECTS := .
 # hooks, and many of those files are managed: formatting them here would be drift.
 PRETTIER_FILES := '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
 
+# The environments a hosting profile's deploy target takes, as ENV=<one of them>, and the
+# recipe line that stops the target unless it was given one.
+DEPLOY_ENVS := staging production
+space := $(subst ,, )
+deploy-env-pattern = $(subst $(space),|,$(DEPLOY_ENVS))
+require-deploy-env = @case "$(ENV)" in $(deploy-env-pattern)) ;; \
+	*) echo "$(MSG_DEPLOY_USAGE)" >&2; exit 1 ;; esac
+
+MSG_ROUTES_STALE := $(GLYPH_FAIL) src/routeTree.gen.ts was stale and the build rewrote it: commit it
+MSG_DEPLOY_USAGE = $(GLYPH_FAIL) usage: $(DEVTOOLS) deploy ENV=$(deploy-env-pattern)
+
 .PHONY: install dev build preview test typecheck eslint fmt fmt-check budget audit ci check lock clean
 
 install: ## Install the packages pnpm-lock.yaml pins
@@ -34,7 +45,7 @@ build: ## Production build; fails if it had to rewrite a stale src/routeTree.gen
 		&& $(MISE) exec -- pnpm exec vite build \
 		&& after="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
 		&& if [ "$${before}" != "$${after}" ]; then \
-			echo "✖ src/routeTree.gen.ts was stale and the build rewrote it: commit it" >&2; exit 1; \
+			echo "$(MSG_ROUTES_STALE)" >&2; exit 1; \
 		fi
 
 preview: build ## Serve the production build locally

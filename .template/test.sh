@@ -224,6 +224,13 @@ expect 0 "naming the Cloud Run service after the project" \
 expect 0 "with an image on the Node mise.toml pins" \
     grep -q "^FROM node:$(sed -n 's/^node = "\(.*\)"/\1/p' mise.toml)-" "${vite}/Dockerfile"
 
+echo "vite-react-tanstack bundle budget"
+budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }
+expect 1 "fails before anything is built" budget --dir nothing-here
+mkdir -p "${vite}/dist/assets" && echo 'console.log(1)' >"${vite}/dist/assets/app.js"
+expect 0 "passes a bundle within its budget" budget
+expect 1 "fails a chunk over its budget" budget --chunk-kib 0
+
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
 expect 2 "an unknown flag is an error" .devtools/scripts/template-sync.sh --nope

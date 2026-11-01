@@ -4,6 +4,12 @@ ROOT := $(abspath ..)
 MISE := mise
 LEFTHOOK := $(MISE) exec -- lefthook
 
+# What a target prints, as the scripts' strings.sh prints it. A profile's own messages are
+# variables at the top of its .mk file.
+GLYPH_OK := ✔
+GLYPH_FAIL := ✖
+DEVTOOLS := make -C .devtools
+
 .DEFAULT_GOAL := help
 .PHONY: help setup lint scan lock-tools sync drift github
 

@@ -24,6 +24,7 @@ file  .devtools/vite/vite.ts
 file  .devtools/vite/vitest.ts
 file  .devtools/vite/eslint.js
 file  .devtools/vite/tsconfig.base.json
+file  .devtools/scripts/strings.mjs
 file  .devtools/scripts/gen.mjs
 file  .devtools/scripts/bundle-budget.mjs
 file  .prettierrc.json

@@ -15,6 +15,8 @@ import { join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
 import { gzipSync } from 'node:zlib'
 
+import { budgetMessages as say, glyph } from './strings.mjs'
+
 const { values } = parseArgs({
   options: {
     dir: { type: 'string', default: 'dist' },
@@ -23,6 +25,7 @@ const { values } = parseArgs({
   }
 })
 const KiB = 1024
+const kib = (bytes) => (bytes / KiB).toFixed(1)
 const chunkLimit = Number(values['chunk-kib'])
 const totalLimit = Number(values['total-kib'])
 
@@ -32,11 +35,11 @@ try {
     .filter((entry) => entry.isFile() && /\.(js|css)$/.test(entry.name))
     .map((entry) => join(entry.parentPath, entry.name))
 } catch {
-  console.error(`✖ bundle budget: nothing built in ${values.dir}/. Build first.`)
+  console.error(`${glyph.fail} ${say.nothingBuilt(values.dir)}`)
   process.exit(1)
 }
 if (files.length === 0) {
-  console.error(`✖ bundle budget: no .js or .css files in ${values.dir}/`)
+  console.error(`${glyph.fail} ${say.noFiles(values.dir)}`)
   process.exit(1)
 }
 
@@ -46,21 +49,15 @@ for (const file of files) {
   const bytes = readFileSync(file)
   total += gzipSync(bytes).length
   if (file.endsWith('.js') && bytes.length > chunkLimit * KiB) {
-    problems.push(
-      `${relative(values.dir, file)} is ${(bytes.length / KiB).toFixed(1)} KiB, over ` +
-        `${chunkLimit} KiB: split it with a lazy route, lazy(), or a vendor chunk`
-    )
+    problems.push(say.chunkOver(relative(values.dir, file), kib(bytes.length), chunkLimit))
   }
 }
 if (total > totalLimit * KiB) {
-  problems.push(`the bundle is ${(total / KiB).toFixed(1)} KiB gzipped, over ${totalLimit} KiB`)
+  problems.push(say.totalOver(kib(total), totalLimit))
 }
 
 if (problems.length > 0) {
-  for (const problem of problems) console.error(`✖ ${problem}`)
+  for (const problem of problems) console.error(`${glyph.fail} ${problem}`)
   process.exit(1)
 }
-console.log(
-  `✔ bundle budget: ${(total / KiB).toFixed(1)} of ${totalLimit} KiB gzipped, ` +
-    `every chunk under ${chunkLimit} KiB`
-)
+console.log(`${glyph.ok} ${say.within(kib(total), totalLimit, chunkLimit)}`)

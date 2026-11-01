@@ -14,6 +14,13 @@
 #   stray-java.sh --kill   stop them (SIGTERM, then SIGKILL)
 set -euo pipefail
 
+# The template's names and helpers, beside this script in a project; its own messages follow.
+# shellcheck source=.devtools/scripts/strings.sh
+. "$(dirname "${BASH_SOURCE[0]}")/strings.sh" || exit 2
+MSG_STRAY='stray JVM %s (%d MB): %.120s'
+MSG_STRAY_TOTAL='%s orphaned build JVM(s), %d MB total'
+MSG_STRAY_FIX="Stop them with: ${DEVTOOLS} kill-stray"
+
 root="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 kill_them=false
 [[ "${1:-}" == "--kill" ]] && kill_them=true
@@ -35,12 +42,12 @@ strays="$(
 total=0
 while IFS=$'\t' read -r pid rss command; do
     total=$((total + rss))
-    printf 'stray JVM %s (%d MB): %.120s\n' "${pid}" "$((rss / 1024))" "${command}" >&2
+    say "${MSG_STRAY}" "${pid}" "$((rss / 1024))" "${command}" >&2
 done <<<"${strays}"
-printf '%s orphaned build JVM(s), %d MB total\n' "$(wc -l <<<"${strays}" | tr -d ' ')" "$((total / 1024))" >&2
+say "${MSG_STRAY_TOTAL}" "$(wc -l <<<"${strays}" | tr -d ' ')" "$((total / 1024))" >&2
 
 if [[ "${kill_them}" != true ]]; then
-    printf 'Stop them with: make -C .devtools kill-stray\n' >&2
+    say "${MSG_STRAY_FIX}" >&2
     exit 1
 fi
 

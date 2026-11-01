@@ -26,10 +26,12 @@ import { basename, dirname, join } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
+import { genMessages as say, genNext, glyph } from './strings.mjs'
+
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 const die = (message) => {
-  console.error(`✖ ${message}`)
+  console.error(`${glyph.fail} ${message}`)
   process.exit(1)
 }
 
@@ -52,11 +54,11 @@ const camel = (name) => {
 /** Writes every file or none: one that already exists stops the run before anything is written. */
 function emit(files) {
   const taken = Object.keys(files).filter((path) => existsSync(join(root, path)))
-  if (taken.length > 0) die(`refusing to overwrite: ${taken.join(', ')}`)
+  if (taken.length > 0) die(say.refusing(taken))
   for (const [path, contents] of Object.entries(files)) {
     mkdirSync(dirname(join(root, path)), { recursive: true })
     writeFileSync(join(root, path), contents)
-    console.log(`  created ${path}`)
+    console.log(say.created(path))
   }
   format(Object.keys(files))
   return Object.keys(files)
@@ -73,9 +75,9 @@ function format(paths) {
 }
 
 function run(command, args) {
-  console.log(`\n$ ${command} ${args.join(' ')}`)
+  console.log(say.running(command, args))
   const { status, error } = spawnSync(command, args, { cwd: root, stdio: 'inherit' })
-  if (error || status !== 0) die(`${command} ${args[0]} failed`)
+  if (error || status !== 0) die(say.failed(command, args))
 }
 
 /** The project's name, slug and Node major, as init and mise.toml left them. */
@@ -121,17 +123,17 @@ function languages() {
   return found.length > 0 ? found.map((entry) => entry.name) : ['en']
 }
 
-const next = (...lines) => console.log(`\nNext:\n${lines.map((line) => `  ${line}`).join('\n')}`)
+const next = (...lines) => console.log(say.next(lines))
 
 /** Maps a URL path to its route file and the id createFileRoute takes. */
 function routeOf(path) {
-  if (!path.startsWith('/')) die(`a route path starts with /: ${path}`)
+  if (!path.startsWith('/')) die(say.routeNoSlash(path))
   const segments = path.slice(1).split('/')
   const index = segments.at(-1) === ''
   if (index) segments.pop()
   for (const segment of segments) {
     if (!/^[\w$.()-]+$/.test(segment) || /^\.+$/.test(segment) || segment === '__root') {
-      die(`not a route path segment: '${segment}' in ${path}`)
+      die(say.routeBadSegment(segment, path))
     }
   }
   const file = [...segments, ...(index || segments.length === 0 ? ['index'] : [])].join('/')
@@ -142,7 +144,7 @@ function routeOf(path) {
 
 const generators = {
   route([path], { feature }) {
-    if (!path) die('usage: gen.mjs route <path> [--feature <name>]')
+    if (!path) die(say.usageRoute)
     const { file, id } = routeOf(path)
     if (!feature) {
       const Name = `${pascal(id) || 'Index'}Route`
@@ -161,7 +163,7 @@ function ${Name}() {
     } else {
       const k = kebab(feature)
       if (!existsSync(join(root, `src/features/${k}/queries.ts`))) {
-        die(`no feature ${k}: run gen.mjs feature ${k} first`)
+        die(say.noFeature(k))
       }
       emit({
         [file]: `import { createFileRoute } from '@tanstack/react-router'
@@ -176,11 +178,11 @@ export const Route = createFileRoute('${id}')({
 `
       })
     }
-    next('the router plugin adds it to src/routeTree.gen.ts on the next dev or build run')
+    next(genNext.route)
   },
 
   feature([name]) {
-    if (!name) die('usage: gen.mjs feature <name>')
+    if (!name) die(say.usageFeature)
     const k = kebab(name)
     const P = pascal(name)
     const c = camel(name)
@@ -266,11 +268,11 @@ describe('${P}Page', () => {
 })
 `
     })
-    next(`route it: node .devtools/scripts/gen.mjs route /${k} --feature ${k}`)
+    next(genNext.feature(k))
   },
 
   component([name]) {
-    if (!name) die('usage: gen.mjs component <name>')
+    if (!name) die(say.usageComponent)
     const k = kebab(name)
     const P = pascal(name)
     emit({
@@ -298,7 +300,7 @@ describe('${P}', () => {
   },
 
   hook([name]) {
-    if (!name) die('usage: gen.mjs hook <name>')
+    if (!name) die(say.usageHook)
     const k = kebab(name).replace(/^use-/, '')
     const P = pascal(k)
     emit({
@@ -329,16 +331,16 @@ describe('use${P}', () => {
   async host(_, { install: installing }) {
     const host = await hostScaffold()
     if (!host) {
-      die('no hosting profile: list one in .template-profiles, then make -C .devtools sync')
+      die(say.noHost)
     }
     const written = emit(host.files)
     if (!installing) {
-      next('install the packages .devtools/host/scaffold.mjs lists', ...host.next)
+      next(genNext.hostNoInstall, ...host.next)
       return
     }
     install(host.dependencies, host.devDependencies)
     format(written)
-    next('make -C .devtools check', ...host.next)
+    next(genNext.check, ...host.next)
   },
 
   async app(_, { install: installing }) {
@@ -678,9 +680,7 @@ window.scrollTo = () => {}
     })
 
     if (!installing) {
-      next(
-        'install the packages listed in .devtools/scripts/gen.mjs (app), then: pnpm exec vite build'
-      )
+      next(genNext.appNoInstall)
       return
     }
     install(
@@ -724,18 +724,15 @@ window.scrollTo = () => {}
         '@tanstack/eslint-plugin-router',
         'eslint-plugin-i18next',
         'prettier',
+        // The shadcn/ui CLI, so `pnpm exec shadcn` runs the version pnpm-lock.yaml pins.
+        'shadcn',
         ...host.devDependencies
       ]
     )
     // The first build writes src/routeTree.gen.ts, which the router and the types import.
     run('pnpm', ['exec', 'vite', 'build'])
     format(written)
-    next(
-      'make -C .devtools check',
-      'pnpm dlx shadcn@latest init    # the design tokens and components.json, for shadcn/ui',
-      'git add -A                      # src/routeTree.gen.ts and pnpm-lock.yaml included',
-      ...host.next
-    )
+    next(genNext.check, genNext.shadcn, genNext.commit, ...host.next)
   }
 }
 
@@ -749,5 +746,5 @@ const { positionals, values } = parseArgs({
 })
 const [kind, ...rest] = positionals
 const generate = generators[kind]
-if (!generate) die(`usage: gen.mjs <${Object.keys(generators).join('|')}> ...`)
+if (!generate) die(say.usage(Object.keys(generators)))
 await generate(rest, values)
