@@ -1,5 +1,28 @@
 # Changelog
 
+## [0.5.0](https://github.com/studiobimo/project-template/compare/v0.4.1...v0.5.0) (2026-11-01)
+
+
+### Features
+
+* **devtools:** add required manifest entries and review override files ([#29](https://github.com/studiobimo/project-template/issues/29)) ([3c0698b](https://github.com/studiobimo/project-template/commit/3c0698b3c7cc163106178472b947ef71a96a8d77))
+* **devtools:** add the cloudflare hosting profile ([#23](https://github.com/studiobimo/project-template/issues/23)) ([2f7f161](https://github.com/studiobimo/project-template/commit/2f7f16193d007d210856c04d6de32a4a73423ed3))
+* **devtools:** add the gcp hosting profile ([#25](https://github.com/studiobimo/project-template/issues/25)) ([4ec4b65](https://github.com/studiobimo/project-template/commit/4ec4b65cb8713b6378de125560774b3b78120395))
+* **devtools:** add the vite-react-tanstack profile ([#22](https://github.com/studiobimo/project-template/issues/22)) ([f83b0e5](https://github.com/studiobimo/project-template/commit/f83b0e53340c42b910347e2ebfb7982d9fc9bffe))
+* **devtools:** deploy the cloudflare profile from github actions ([#26](https://github.com/studiobimo/project-template/issues/26)) ([bb5498a](https://github.com/studiobimo/project-template/commit/bb5498a5c8e1e49be7eeefc5fe533cefcd9e531c))
+* **devtools:** hold issue titles to conventional commits ([#32](https://github.com/studiobimo/project-template/issues/32)) ([b90ac34](https://github.com/studiobimo/project-template/commit/b90ac34df441aaee02558b0048a1e1aa34af4e8e))
+* **devtools:** let the web profiles run from an app directory ([#36](https://github.com/studiobimo/project-template/issues/36)) ([f57c60c](https://github.com/studiobimo/project-template/commit/f57c60cbbc4271fee82315c8f879b90634d3e0d6))
+* **devtools:** run the gcp profile from an app directory ([#38](https://github.com/studiobimo/project-template/issues/38)) ([cb55194](https://github.com/studiobimo/project-template/commit/cb55194029c27ed767c7548982b07d4a44363930))
+* **devtools:** share the eslint and vitest configs with workspace packages ([#37](https://github.com/studiobimo/project-template/issues/37)) ([6be3f06](https://github.com/studiobimo/project-template/commit/6be3f06eef6fd48a4d74f227d2d32325fa294fbc))
+
+
+### Bug Fixes
+
+* **deps:** refresh the check-jsonschema lock for certifi 2026.10.19 ([#28](https://github.com/studiobimo/project-template/issues/28)) ([8c8447f](https://github.com/studiobimo/project-template/commit/8c8447f7a45b4d83efb14165796adea518e00852))
+* **devtools:** centralize the profiles' strings and pin the shadcn cli ([#33](https://github.com/studiobimo/project-template/issues/33)) ([301fe04](https://github.com/studiobimo/project-template/commit/301fe04bfb9f0c12597012567b3b05913a7b8f5f))
+* **devtools:** keep a project's lines when a managed block loses its end marker ([#31](https://github.com/studiobimo/project-template/issues/31)) ([d9fa068](https://github.com/studiobimo/project-template/commit/d9fa068c5dc63d5ffa0c2ee37f6f277c47a8dbe6))
+* **devtools:** leave the generated changelog out of typos ([#30](https://github.com/studiobimo/project-template/issues/30)) ([7cea7ca](https://github.com/studiobimo/project-template/commit/7cea7ca5066302eceaaf66d869c4a1b482ea01a2))
+
 ## [0.4.1](https://github.com/studiobimo/project-template/compare/v0.4.0...v0.4.1) (2026-10-10)
 
 
