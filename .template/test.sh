@@ -2,6 +2,9 @@
 set -euo pipefail
 
 template="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# The names and placeholders the scripts use, so a test never spells one differently.
+# shellcheck source=.devtools/scripts/strings.sh
+. "${template}/.devtools/scripts/strings.sh"
 failures=0
 
 expect() {
@@ -73,11 +76,26 @@ expect 1 "a block without its markers is drift" "${sync[@]}" --check
 expect 0 "sync appends the block" "${sync[@]}"
 expect 0 "in step once the markers are back" "${sync[@]}" --check
 
+printf '# >>> template:baseline\nours\n# <<< template:baseline\n' >>.gitignore
+expect 0 "a block whose name only starts like a managed one is the project's" "${sync[@]}" --check
+sed -i.bak '/<<< template:base$/d' .gitignore && rm .gitignore.bak
+expect 1 "a block that lost its end marker is drift" "${sync[@]}" --check
+expect 2 "which sync refuses to rewrite" "${sync[@]}"
+expect 0 "so the project's lines after it survive" grep -qx 'build/' .gitignore
+git checkout --quiet -- .gitignore
+sed -n '/>>> template:base$/,/<<< template:base$/p' .gitignore >"${work}/block"
+cat "${work}/block" >>.gitignore
+expect 1 "a block that appears twice is drift" "${sync[@]}" --check
+expect 2 "which sync refuses to rewrite" "${sync[@]}"
+git checkout --quiet -- .gitignore
+
 echo "# edited locally" >>lychee.toml
 printf '# We check extra hosts here.\nlychee.toml\n' >.template-ignore
 expect 0 ".template-ignore exempts a path" "${sync[@]}" --check
 expect 0 "sync leaves an ignored path alone" "${sync[@]}"
 expect 0 "the local edit is still there" grep -q 'edited locally' lychee.toml
+printf 'lychee.toml  # we check extra hosts here' >.template-ignore
+expect 0 "so does a path with its reason beside it, on a last line with no newline" "${sync[@]}" --check
 
 echo "# edited locally" >>.devtools/scripts/agent-guard.sh
 printf '# We check extra hosts here.\nlychee.toml\n# ours\n.devtools/scripts/agent-guard.sh\n' >.template-ignore
@@ -148,6 +166,8 @@ echo nope >.template-profiles
 expect 2 "a profile the template does not have is an error, not drift" "${psync[@]}" --check
 echo '../src' >.template-profiles
 expect 2 "a profile name that is not a name is an error" "${psync[@]}" --check
+printf 'nope' >.template-profiles
+expect 2 "even on a last line with no newline" "${psync[@]}" --check
 rm .template-profiles fixture.txt cfg.yml
 
 # Every profile the template ships: each file it lists exists, each block has its markers.
@@ -207,6 +227,10 @@ expect 0 "with an image on the Node mise.toml pins" \
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
 expect 2 "an unknown flag is an error" .devtools/scripts/template-sync.sh --nope
+expect 2 "and so is a flag without its value" .devtools/scripts/template-sync.sh --from
+expect 0 "--help prints the usage" .devtools/scripts/template-sync.sh --help
+cp "${work}/out" "${work}/help.out"
+expect 0 "from the script's header" grep -q '^Usage: template-sync.sh' "${work}/help.out"
 
 echo "github-setup"
 # A gh that answers from GH_REPO_JSON and records every call that would change something.
@@ -248,6 +272,59 @@ expect 2 "refuses without admin rights" \
     env GH_REPO_JSON='{"nameWithOwner":"acme/widget","description":"","viewerCanAdminister":false}' "${setup[@]}"
 expect 2 "refuses a repository that is not on GitHub" env GH_REPO_JSON= "${setup[@]}"
 expect 2 "an unknown flag is an error" .devtools/scripts/github-setup.sh --nope
+expect 2 "and so is a flag without its value" .devtools/scripts/github-setup.sh --ref
+
+echo "agent-guard"
+# A mise that answers `mise exec -- lefthook ...` as the org's jobs would, and logs each job.
+mkdir -p "${work}/guard"
+cat >"${work}/guard/mise" <<'MISE'
+#!/usr/bin/env bash
+[[ "$1 $2 $3" == "exec -- lefthook" ]] || exit 127
+case "$4" in
+    version) [[ -z "${GUARD_NOT_SET_UP:-}" ]] ;;
+    run)
+        job="$7"
+        echo "${job} BRANCH_NAME=${BRANCH_NAME:-} PR_BASE=${PR_BASE:-}" >>"${GUARD_LOG}"
+        if [[ "${job}" == branch-name && ! "${BRANCH_NAME}" =~ ^[a-z]+/[a-z0-9*-]+$ ]] \
+            || [[ "${job}" == pr-size && -n "${GUARD_TOO_BIG:-}" ]]; then
+            echo "🥊 ${job}"
+            exit 1
+        fi
+        ;;
+esac
+MISE
+chmod +x "${work}/guard/mise"
+export GUARD_LOG="${work}/guard.log"
+# guard [VAR=value ...] <command>: the call as Claude Code hands it to the hook.
+guard() {
+    local vars=()
+    while [[ $# -gt 1 ]]; do vars+=("$1"); shift; done
+    jq -n --arg command "$1" '{tool_input: {command: $command}}' \
+        | env PATH="${work}/guard:${PATH}" ${vars[@]+"${vars[@]}"} .devtools/scripts/agent-guard.sh
+}
+guarded() { grep -qxF -- "$1" "${GUARD_LOG}"; }
+
+expect 0 "lets a Conventional Branch through" guard 'git switch -c feat/new-thing'
+expect 2 "blocks git switch -c with any other name" guard 'git switch -c New_Thing'
+expect 2 "and git checkout -b, after other flags" guard 'git checkout -q -b New_Thing main'
+expect 2 "and git worktree add -b" guard 'git worktree add ../elsewhere -b New_Thing'
+expect 2 "and git branch <name>" guard 'git branch New_Thing'
+expect 0 "but not git branch -d" guard 'git branch -d New_Thing'
+expect 2 "and a rename to a bad name" guard 'git branch -m feat/old New_Thing'
+expect 0 "judging the new name, not the old" guard 'git branch -m Old_Thing feat/new-thing'
+expect 2 "and every layer gh stack adds" guard 'gh stack add feat/fine New_Thing'
+: >"${GUARD_LOG}"
+expect 0 "reads a * as a name, never a glob" guard 'gh stack add feat/*'
+expect 0 "so it checks that one name" guarded 'branch-name BRANCH_NAME=feat/* PR_BASE='
+expect 0 "lets a push through when the size check passes" guard 'git push -u origin HEAD'
+expect 2 "blocks it when it does not" guard GUARD_TOO_BIG=1 'git push'
+expect 2 "and gh pr create, after another command" guard GUARD_TOO_BIG=1 'cd here && gh pr create --fill'
+: >"${GUARD_LOG}"
+expect 0 "measures a pull request against the base it names" guard 'gh pr create --fill --base feat/lower'
+expect 0 "by passing that base to the job" guarded 'pr-size BRANCH_NAME= PR_BASE=feat/lower'
+expect 0 "lets --help through" guard GUARD_TOO_BIG=1 'git push --help'
+expect 0 "reads only the first line" guard GUARD_TOO_BIG=1 $'cat <<EOF\ngit push\nEOF'
+expect 0 "lets everything through before setup" guard GUARD_NOT_SET_UP=1 'git switch -c New_Thing'
 
 echo "init"
 proj="${work}/proj"
@@ -265,8 +342,8 @@ expect 0 "says so when GitHub could not be set up" grep -q 'GitHub is not set up
 expect 0 "names the project" grep -qx '# My Project' README.md
 expect 0 "keeps punctuation in the description" grep -qxF 'Does one thing & does it well.' README.md
 expect 1 "leaves no placeholder behind" \
-    grep -rIl --exclude-dir=.git -e 'Project Name' -e 'project-slug' -e 'One-line project description' .
-expect 1 "leaves no init region behind" grep -rIl --exclude-dir=.git 'template:init' .
+    grep -rIlF --exclude-dir=.git -e "${PLACEHOLDER_NAME}" -e "${PLACEHOLDER_SLUG}" -e "${PLACEHOLDER_DESC}" .
+expect 1 "leaves no init region behind" grep -rIl --exclude-dir=.git "template:${INIT_BLOCK}" .
 expect 1 "removes .template/" test -e .template
 expect 1 "removes itself" test -e .devtools/scripts/init.sh
 expect 0 "keeps the GitHub setup for later runs" test -x .devtools/scripts/github-setup.sh

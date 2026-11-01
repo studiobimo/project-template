@@ -23,39 +23,39 @@
 # Managed by studiobimo/project-template; change it there.
 set -euo pipefail
 
-settings_repo="${SETTINGS_REPO:-studiobimo/.github}"
+# shellcheck source-path=SCRIPTDIR
+. "$(dirname "${BASH_SOURCE[0]}")/strings.sh" || exit 2
+
+settings_repo="${SETTINGS_REPO:-${SETTINGS_REPO_DEFAULT}}"
 desc="${DESC:-}"
-envs="${ENVS:-}"
+envs=()
+read -r -a envs <<<"${ENVS:-}" || true
 mode=apply
 from=""
-ref=v1
-
-die() {
-    echo "✖ $*" >&2
-    exit 2
-}
+ref="${SETTINGS_REF_DEFAULT}"
 
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --check) mode=check; shift ;;
-        --from) from="${2:?--from needs a directory}"; shift 2 ;;
-        --ref) ref="${2:?--ref needs a tag or branch}"; shift 2 ;;
-        -h | --help) sed -n '2,21p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-        *) die "unknown argument: $1" ;;
+        --from) need_value "$@"; from="$2"; shift 2 ;;
+        --ref) need_value "$@"; ref="$2"; shift 2 ;;
+        -h | --help) usage_of "${BASH_SOURCE[0]}"; exit "${EXIT_OK}" ;;
+        *) die "${MSG_UNKNOWN_ARG}" "$1" ;;
     esac
 done
 
-command -v gh >/dev/null 2>&1 || die "gh is not installed (brew install gh)"
-command -v jq >/dev/null 2>&1 || die "jq is not installed (brew install jq)"
+for tool in gh jq; do
+    command -v "${tool}" >/dev/null 2>&1 || die "${MSG_NEEDS_TOOL}" "${tool}" "${tool}"
+done
 
 info="$(gh repo view --json nameWithOwner,description,viewerCanAdminister 2>/dev/null)" \
-    || die "cannot find this repository on GitHub: does it have a remote, and is gh signed in?"
+    || die "${MSG_GH_NO_REPO}"
 repo="$(jq -r .nameWithOwner <<<"${info}")"
-[[ "$(jq -r .viewerCanAdminister <<<"${info}")" == true ]] \
-    || die "settings and rulesets need an admin of ${repo}, and you are not one"
+[[ "$(jq -r .viewerCanAdminister <<<"${info}")" == true ]] || die "${MSG_GH_NOT_ADMIN}" "${repo}"
 
-for env in ${envs}; do
-    [[ "${env}" =~ ^[A-Za-z0-9._-]+$ ]] || die "not an environment name: ${env}"
+# Bash 3.2 calls an empty array unset, hence the ${envs[@]+...} on every expansion.
+for env in ${envs[@]+"${envs[@]}"}; do
+    [[ "${env}" =~ ^[A-Za-z0-9._-]+$ ]] || die "${MSG_GH_BAD_ENV}" "${env}"
 done
 
 work="$(mktemp -d)"
@@ -63,54 +63,53 @@ trap 'rm -rf "${work}"' EXIT
 
 if [[ -z "${from}" ]]; then
     from="${work}/settings"
-    git clone --quiet --depth 1 --branch "${ref}" "https://github.com/${settings_repo}" "${from}" 2>/dev/null \
-        || die "cannot clone ${settings_repo} at ${ref}"
+    git clone --quiet --depth 1 --branch "${ref}" "${GITHUB_URL}/${settings_repo}" "${from}" 2>/dev/null \
+        || die "${MSG_CANNOT_CLONE}" "${settings_repo}" "${ref}"
 fi
 
 differences=0
 skipped=""
 
-# differs <what>: one finding, in the shared script's layout.
+# differs <format> [<value>...]: one finding, in the shared script's layout.
 differs() {
     differences=$((differences + 1))
-    echo "    $*"
+    say "${MSG_GH_FINDING}" "$(say "$@")"
 }
 
-shared="${from}/.devtools/repo-settings.sh"
+shared="${from}/${SETTINGS_SCRIPT}"
 if [[ -f "${shared}" ]]; then
     flags=()
     [[ "${mode}" == apply ]] || flags=(--check)
     status=0
     ORG="${repo%%/*}" bash "${shared}" ${flags[@]+"${flags[@]}"} "${repo#*/}" || status=$?
-    if [[ "${mode}" == check && "${status}" -eq 1 ]]; then
+    if [[ "${mode}" == check && "${status}" -eq "${EXIT_DIFFERS}" ]]; then
         differences=$((differences + 1))
-    elif [[ "${status}" -ne 0 ]]; then
-        die "${settings_repo}@${ref} could not apply its settings to ${repo} (exit ${status})"
+    elif [[ "${status}" -ne "${EXIT_OK}" ]]; then
+        die "${MSG_GH_SHARED_FAILED}" "${settings_repo}" "${ref}" "${repo}" "${status}"
     fi
 else
-    echo "${repo}"
-    echo "    ! ${settings_repo}@${ref} has no .devtools/repo-settings.sh, so the shared" >&2
-    echo "      settings and rulesets were skipped; try another --ref" >&2
-    skipped=", apart from the shared settings and rulesets"
+    say '%s' "${repo}"
+    warn "${MSG_GH_NO_SHARED}" "${settings_repo}" "${ref}" "${SETTINGS_SCRIPT}"
+    skipped="${MSG_GH_SKIPPED}"
 fi
 
 if [[ -n "${desc}" && "$(jq -r '.description // ""' <<<"${info}")" != "${desc}" ]]; then
-    differs "description: $(jq '.description // ""' <<<"${info}") -> $(jq -n --arg d "${desc}" '$d')"
+    differs "${MSG_GH_DESCRIPTION}" "$(jq '.description // ""' <<<"${info}")" "$(jq -n --arg d "${desc}" '$d')"
     if [[ "${mode}" == apply ]]; then
         gh repo edit "${repo}" --description "${desc}" >/dev/null
     fi
 fi
 
-for env in ${envs}; do
+for env in ${envs[@]+"${envs[@]}"}; do
     gh api "repos/${repo}/environments/${env}" >/dev/null 2>&1 && continue
-    differs "environment ${env}: missing"
+    differs "${MSG_GH_ENV_MISSING}" "${env}"
     if [[ "${mode}" == apply ]]; then
         gh api -X PUT "repos/${repo}/environments/${env}" >/dev/null
     fi
 done
 
 if ((differences > 0)) && [[ "${mode}" == check ]]; then
-    echo "✖ ${repo} differs. Apply with: make -C .devtools github"
-    exit 1
+    fail "${MSG_GH_DIFFERS}" "${repo}"
+    exit "${EXIT_DIFFERS}"
 fi
-echo "✔ ${repo} is set up${skipped}"
+ok "${MSG_GH_SET_UP}" "${repo}" "${skipped}"
