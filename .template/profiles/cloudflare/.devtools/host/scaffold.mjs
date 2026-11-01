@@ -2,12 +2,13 @@
 //
 // The project's own Cloudflare files and packages, for `gen.mjs host` (or `gen.mjs app`) to
 // write and install. Once written they are the project's: sync never compares them.
+import { join } from 'node:path'
 
 // The newest date the workerd that pnpm installs is sure to know: pnpm takes nothing less
 // than a week old, and a release supports dates up to its own.
 const compatibilityDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-export default ({ slug }) => ({
+export default ({ slug, repo }) => ({
   dependencies: ['hono'],
   devDependencies: ['@cloudflare/vite-plugin', 'wrangler'],
   next: [
@@ -16,7 +17,7 @@ export default ({ slug }) => ({
   ],
   files: {
     'wrangler.jsonc': `{
-  "$schema": "node_modules/wrangler/config-schema.json",
+  "$schema": "${join(repo, 'node_modules/wrangler/config-schema.json')}",
   "name": "${slug}",
   "main": "worker/index.ts",
   "compatibility_date": "${compatibilityDate}",
@@ -43,7 +44,7 @@ export default ({ slug }) => ({
 # type. A deployed environment's values: pnpm exec wrangler secret put <NAME> --env <env>.
 `,
     'worker/tsconfig.json': `{
-  "extends": "../.devtools/vite/tsconfig.base.json",
+  "extends": "${join('..', repo, '.devtools/vite/tsconfig.base.json')}",
   "compilerOptions": {
     "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.worker.tsbuildinfo",
     "lib": ["ES2024"],

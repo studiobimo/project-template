@@ -40,6 +40,11 @@ src/
 `@/` is `src/`. A feature folder stays flat, so one `ls` shows all of it. Only code that more
 than one feature uses moves up to `components/`, `hooks/` or `lib/`.
 
+In a workspace the app sits in `APP_DIR`, which `.devtools/Makefile` sets, and the layout above
+is inside it. Its `package.json` lists what the app imports. The root's lists the tools that
+`.devtools/` imports, since those resolve from the root. `eslint.config.js` and
+`.prettierignore` stay at the root. Run `pnpm exec shadcn` from `APP_DIR`.
+
 ### Conventions
 
 - **Scaffold with the generator** rather than copying the nearest file: it writes code that
@@ -59,7 +64,8 @@ than one feature uses moves up to `components/`, `hooks/` or `lib/`.
   own namespace, `useTranslation('<feature>')`; shared ones in `common`. A key with no
   string fails any test that renders it.
 - **One schema per concept.** A feature's zod schema validates its form, its API responses
-  and, on the server, its requests. Never write a second schema for the same payload.
+  and, on the server, its requests. Never write a second schema for the same payload. A
+  workspace may keep shared schemas in a package instead of `src/features/<name>/schema.ts`.
 - **Query options live with the feature.** `queries.ts` exports `queryOptions(...)`, so a
   route's `loader` can `ensureQueryData` what its page then reads with `useSuspenseQuery`.
 - **Code-splitting.** Routes split themselves. Use `lazy()` with `<Suspense>` for heavy,

@@ -11,6 +11,8 @@ export const glyph = { ok: '✔', fail: '✖' }
 export const devtools = 'make -C .devtools'
 export const gen = 'node .devtools/scripts/gen.mjs'
 
+const pnpmIn = (appDir) => (appDir === '.' ? 'pnpm' : `pnpm --dir ${appDir}`)
+
 export const genMessages = {
   usage: (kinds) => `usage: gen.mjs <${kinds.join('|')}> ...`,
   usageRoute: 'usage: gen.mjs route <path> [--feature <name>]',
@@ -25,7 +27,9 @@ export const genMessages = {
   routeNoSlash: (path) => `a route path starts with /: ${path}`,
   routeBadSegment: (segment, path) => `not a route path segment: '${segment}' in ${path}`,
   noFeature: (name) => `no feature ${name}: run gen.mjs feature ${name} first`,
-  noHost: `no hosting profile: list one in .template-profiles, then ${devtools} sync`
+  noHost: `no hosting profile: list one in .template-profiles, then ${devtools} sync`,
+  noWorkspace: (appDir) =>
+    `APP_DIR is ${appDir}: list it under packages: at the top of pnpm-workspace.yaml first`
 }
 
 // What to do after each generator, one line per step.
@@ -33,10 +37,11 @@ export const genNext = {
   route: 'the router plugin adds it to src/routeTree.gen.ts on the next dev or build run',
   feature: (name) => `route it: ${gen} route /${name} --feature ${name}`,
   hostNoInstall: 'install the packages .devtools/host/scaffold.mjs lists',
-  appNoInstall:
-    'install the packages listed in .devtools/scripts/gen.mjs (app), then: pnpm exec vite build',
+  appNoInstall: (appDir) =>
+    `install the packages listed in .devtools/scripts/gen.mjs (app), then: ${pnpmIn(appDir)} exec vite build`,
   check: `${devtools} check`,
-  shadcn: 'pnpm exec shadcn init          # the design tokens and components.json, for shadcn/ui',
+  shadcn: (appDir) =>
+    `${pnpmIn(appDir)} exec shadcn init          # the design tokens and components.json, for shadcn/ui`,
   commit: 'git add -A                     # src/routeTree.gen.ts and pnpm-lock.yaml included'
 }
 

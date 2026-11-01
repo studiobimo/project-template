@@ -14,6 +14,11 @@
 # half in .devtools/vite/, and `node .devtools/scripts/gen.mjs app` writes a first version
 # of all of them.
 #
+# In a pnpm workspace those files sit in the app's directory: set APP_DIR in .devtools/Makefile
+# above `include vite.mk`, and list it under a packages: key above the block in
+# pnpm-workspace.yaml. eslint.config.js, .prettierignore and a package.json for the shared
+# tools stay at the root.
+#
 # Adding the profile to a project: `include vite.mk` from .devtools/Makefile, after
 # base.mk, and remove the Makefile's own `clean` recipe. If the project already has the
 # files the blocks below go in, wrap the lines that do the same job in the markers first;

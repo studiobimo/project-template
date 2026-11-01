@@ -7,7 +7,7 @@
 # mise.toml, passes over them: ci.yml runs the same checks once it has installed.
 pre-push:
   jobs:
-    # Through make, which knows the hosting profile's tsc projects and generated types.
+    # Through make, which knows APP_DIR, the hosting profile's tsc projects and generated types.
     - name: typecheck
       skip:
         - run: test ! -d node_modules
@@ -16,12 +16,13 @@ pre-push:
     - name: vitest
       skip:
         - run: test ! -d node_modules
-      run: mise exec -- pnpm exec vitest run
+      run: make --no-print-directory -C .devtools test
 
 pre-commit:
   # Files pnpm and the router plugin write.
   exclude:
     - 'pnpm-lock.yaml'
+    - '**/src/routeTree.gen.ts'
     - 'src/routeTree.gen.ts'
 
   jobs:

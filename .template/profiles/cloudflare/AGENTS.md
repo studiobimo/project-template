@@ -5,7 +5,7 @@
 The `cloudflare` profile keeps this section and `.devtools/host/` in step with the template.
 The shared Vite, Vitest, ESLint and make configs load their Cloudflare parts from there, so
 the project's own config files never name the host. `wrangler.jsonc`, `.dev.vars.example`
-and `worker/` are the project's.
+and `worker/` are the project's. In a workspace they sit in `APP_DIR`, so run `wrangler` there.
 
 - **One Worker serves the app.** Static files come from `dist/client`, and any path that is
   not a file falls back to `index.html` for the router. Only `/api/*` runs the Hono app in
@@ -32,5 +32,6 @@ and `worker/` are the project's.
   `app.request(path, init, env)` with `env` from `getPlatformProxy()`, and run in Node, not
   workerd. Code that imports a `cloudflare:*` module is tested through its binding.
 - **One schema per concept** holds across the boundary: a route validates its input with
-  the feature's schema from `src/features/<name>/schema.ts`.
+  the feature's schema from `src/features/<name>/schema.ts`, or from a workspace's shared
+  package.
 <!-- <<< template:cloudflare -->

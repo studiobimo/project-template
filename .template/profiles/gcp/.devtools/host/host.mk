@@ -1,6 +1,10 @@
 # Managed by studiobimo/project-template (profile gcp); change it there.
 # vite.mk includes it. Cloud Run's own targets, and its part of the shared ones.
 
+ifneq ($(APP_DIR),.)
+$(error $(GLYPH_FAIL) the gcp profile only runs an app at the repository's root, not in $(APP_DIR))
+endif
+
 # The client builds into dist/client and the server, bundled into one file, into
 # dist/server. Only the client is downloaded by browsers, so only it has a budget.
 BUNDLE_DIR := dist/client
