@@ -38,7 +38,7 @@ require-deploy-env = @case "$(ENV)" in $(deploy-env-pattern)) ;; \
 MSG_ROUTES_STALE := $(GLYPH_FAIL) src/routeTree.gen.ts was stale and the build rewrote it: commit it
 MSG_DEPLOY_USAGE = $(GLYPH_FAIL) usage: $(DEVTOOLS) deploy ENV=$(deploy-env-pattern)
 
-.PHONY: install dev build preview test typecheck eslint fmt fmt-check budget audit ci check lock clean
+.PHONY: install dev build preview test typecheck eslint fmt fmt-check budget audit playwright-install ci check lock clean
 
 install: ## Install the packages pnpm-lock.yaml pins
 	$(PNPM) install --frozen-lockfile
@@ -80,6 +80,13 @@ budget: ## Fail if a client chunk or the whole bundle outgrows its budget (after
 
 audit: ## Fail on high or critical advisories in the packages that ship
 	$(PNPM) audit --prod --audit-level=high
+
+# For a project that runs Playwright. GitHub's runners set CI, and lack the browser's system
+# libraries. The tests run headless, so CI skips the full Chrome that `chromium` also downloads.
+PLAYWRIGHT_BROWSER ?= chromium
+
+playwright-install: ## Install the browser Playwright drives
+	$(APP_PNPM) exec playwright install $(if $(CI),--with-deps --only-shell) $(PLAYWRIGHT_BROWSER)
 
 # Build before typecheck: a route added without running the dev server only exists in
 # the route tree once the build has written it.
