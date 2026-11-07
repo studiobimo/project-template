@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.10.0](https://github.com/studiobimo/project-template/compare/v0.9.0...v0.10.0) (2026-11-07)
+
+
+### Features
+
+* **devtools:** deploy only the environments DEPLOY_ENVS lists on cloud run ([#67](https://github.com/studiobimo/project-template/issues/67)) ([a38fc85](https://github.com/studiobimo/project-template/commit/a38fc852287d7a5bcab171b689c9aa83cc4fbc0d))
+
+
+### Bug Fixes
+
+* **devtools:** pass actionlint in the cloudflare profile's deploy workflow ([#66](https://github.com/studiobimo/project-template/issues/66)) ([8996c79](https://github.com/studiobimo/project-template/commit/8996c799fd3fdee0dc0739f86ff97a02dd5b96d2))
+
 ## [0.9.0](https://github.com/studiobimo/project-template/compare/v0.8.0...v0.9.0) (2026-11-07)
 
 
