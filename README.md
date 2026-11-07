@@ -41,6 +41,11 @@ The GitHub half can be repeated at any time: `make -C .devtools github` applies 
 `make -C .devtools github CHECK=1` only shows what differs. Once the rulesets are on, `main` takes
 pull requests only, so the initialising commit goes up as one; `init` prints the commands.
 
+A private repository gets [less on the Free plan](https://github.com/studiobimo/.github#rulesets-and-repository-settings).
+GitHub offers it no rulesets, secret scanning or private vulnerability reporting, so `github`
+skips them with a note. `main` then takes direct pushes, and `pr-checks` and `lint` run but are not
+required. Only the local hooks and the agent guard hold the rules, and both can be skipped.
+
 Then add the language: build files, the project's own Makefile targets, tools in `mise.toml`
 and jobs in `lefthook.yml`, a CI workflow, and the Project, Layout and Conventions sections of `AGENTS.md`.
 
