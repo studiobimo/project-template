@@ -316,7 +316,55 @@ expect 0 "dev takes the first app" many_has 'cd .*/apps/web' dev
 expect 0 "dev takes the app APP names" many_has 'cd .*/apps/site' dev APP=apps/site
 expect 0 "one app's budget can differ" many_has '--total-kib 200' budget-app APP_DIR=apps/site
 expect 0 "while the others keep the default" many_has '--total-kib 550' budget-app APP_DIR=apps/web
+expect 0 "tests every package, not a list of them" many_has 'packages.mjs test' test
+expect 0 "type-checks the packages that are not apps" \
+    many_has 'packages.mjs typecheck apps/web apps/site' typecheck
+expect 0 "and finds an app missing from APPS when it budgets" \
+    many_has 'packages.mjs apps apps/web apps/site' budget
 rm "${shop}/.devtools/many.mk"
+
+# packages.mjs runs in a package and picks what to run from what the package has. vitest and
+# tsc are stand-ins that record how they were called.
+stubs="${work}/stubs"
+mkdir -p "${stubs}"
+for tool in vitest tsc; do
+    cat >"${stubs}/${tool}" <<'EOF'
+#!/bin/sh
+echo "${0##*/}" "$@" >>"$CALLS"
+EOF
+    chmod +x "${stubs}/${tool}"
+done
+export CALLS="${work}/calls"
+check() { # <directory> <task> [app...]
+    local dir="${shop}/$1"
+    shift
+    : >"${CALLS}"
+    (cd "${dir}" && PATH="${stubs}:${PATH}" mise exec -- node "${shop}/.devtools/scripts/packages.mjs" "$@")
+}
+ran() { grep -q -- "$1" "${CALLS}"; }
+ran_nothing() { ! [[ -s "${CALLS}" ]]; }
+mkdir -p "${shop}/packages/ui/src" "${shop}/packages/data/src" "${shop}/packages/docs"
+touch "${shop}/packages/data/vitest.config.ts" "${shop}/packages/data/tsconfig.json" \
+    "${shop}/packages/ui/tsconfig.json"
+
+expect 0 "a package with a src/ and no config is tested" check packages/ui test
+expect 0 "on the shared default" ran 'vitest run --config .*/.devtools/vite/vitest.default.ts'
+expect 0 "even when it has no tests yet" ran '--passWithNoTests'
+expect 0 "a package with a config is tested on it" check packages/data test
+expect 0 "alone" ran '^vitest run$'
+expect 0 "a package with no src/ is left alone" check packages/docs test
+expect 0 "and runs nothing" ran_nothing
+expect 0 "a package with a tsconfig.json is type-checked" check packages/ui typecheck apps/web
+expect 0 "by tsc -b" ran '^tsc -b$'
+rm "${shop}/packages/ui/tsconfig.json"
+expect 1 "a package with a src/ and no tsconfig.json fails" check packages/ui typecheck apps/web
+expect 0 "an app is left to typecheck-app" check apps/web typecheck apps/web
+expect 0 "and runs nothing" ran_nothing
+expect 0 "a package without a src/ is not type-checked" check packages/docs typecheck apps/web
+expect 1 "an app missing from the list fails" check apps/web apps packages/ui
+expect 0 "an app in it passes" check apps/web apps apps/web
+expect 0 "so does a package with no vite.config.ts" check packages/ui apps apps/web
+expect 1 "an unknown task fails" check packages/ui lint
 
 flat="${work}/flat-shop"
 generated "${flat}"

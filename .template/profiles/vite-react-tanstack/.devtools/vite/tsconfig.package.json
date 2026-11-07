@@ -1,0 +1,12 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Managed by studiobimo/project-template (profile vite-react-tanstack). What a workspace package's tsconfig.json extends, as the React app's: `make typecheck` finds the package by its src/ and tsconfig.json. A package that is not React overrides lib and types.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "${configDir}/node_modules/.tmp/tsconfig.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "vitest/globals"],
+    "jsx": "react-jsx"
+  },
+  "include": ["${configDir}/src"]
+}

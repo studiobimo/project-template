@@ -18,7 +18,8 @@
 # above `include vite.mk` (or APPS, for more than one app), and list it under a packages: key above the block in
 # pnpm-workspace.yaml. .prettierignore stays at the root, beside a package.json for the shared
 # tools and an eslint.config.js for what no package covers. Every other package extends the
-# `base` of .devtools/vite/eslint.js and .devtools/vite/vitest.ts from configs of its own.
+# `react` of .devtools/vite/eslint.js, the `base` of .devtools/vite/vitest.ts and
+# .devtools/vite/tsconfig.package.json from configs of its own; make finds it by its src/.
 #
 # Adding the profile to a project: `include vite.mk` from .devtools/Makefile, after
 # base.mk, and remove the Makefile's own `clean` recipe. If the project already has the
@@ -28,9 +29,12 @@
 file  .devtools/vite.mk
 file  .devtools/vite/vite.ts
 file  .devtools/vite/vitest.ts
+file  .devtools/vite/vitest.default.ts
 file  .devtools/vite/eslint.js
 file  .devtools/vite/tsconfig.base.json
+file  .devtools/vite/tsconfig.package.json
 file  .devtools/scripts/strings.mjs
+file  .devtools/scripts/packages.mjs
 file  .devtools/scripts/gen.mjs
 file  .devtools/scripts/bundle-budget.mjs
 file  .prettierrc.json
