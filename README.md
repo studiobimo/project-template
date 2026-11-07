@@ -149,7 +149,9 @@ Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mis
 ones sit in the `base` block of `mise.toml`, so they are managed: the same linter at the same
 version in every project.
 
-Dependabot does not read `mise.toml`, so nothing bumps these on its own. Bump them here, by hand:
+Dependabot does not read `mise.toml`, so nothing bumps these on its own. `tools-outdated.yml` runs
+weekly and keeps one `tools-outdated` issue open while a pin has a release a week old or more.
+Bump them here, by hand:
 
 ```sh
 mise outdated --bump            # what has a newer release

@@ -5,7 +5,7 @@
 # the markers are bumped in studiobimo/project-template and arrive with
 # `make -C .devtools sync`; the project's own, below them, are bumped here. Either way:
 # change the version, run `make -C .devtools lock`, and commit this file, mise.lock and
-# .mise/locks/ together.
+# .mise/locks/ together. tools-outdated.yml opens an issue weekly while a pin is behind.
 
 # The markers take in the table headers on purpose: a project that gets this block from
 # a sync, with no mise.toml yet, is left with a complete file. Add tools after the end
