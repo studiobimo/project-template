@@ -289,7 +289,11 @@ rm "${shop}/.devtools/above.mk" "${shop}/.devtools/below.mk"
 
 flat="${work}/flat-shop"
 generated "${flat}"
+printf '# Flat Shop\n\n[![Lint](https://example.com/b.svg)](https://example.com)\n![Logo](logo.png)\n\nSells flat things.\n' \
+    >"${flat}/README.md"
 expect 0 "without APP_DIR the app stays at the root" gen_in "${flat}" app --no-install
+expect 0 "past the README's badges for the description" \
+    grep -qF "description: 'Sells flat things.'" "${flat}/src/config/site.ts"
 expect 0 "with one package.json" grep -qF '"gen": "node .devtools/scripts/gen.mjs"' "${flat}/package.json"
 expect 0 "the configs as they were" grep -qF 'defineConfig([app])' "${flat}/eslint.config.js"
 expect 0 "and the paths" grep -qF "'./.devtools/vite/vite.ts'" "${flat}/vite.config.ts"
@@ -309,9 +313,34 @@ expect 0 "and that build let back in, parent by parent" \
 expect 0 "from the first of them" grep -qx '/apps/\*' "${run}/.gcloudignore"
 flat_run="${work}/flat-run"
 generated "${flat_run}" gcp
+printf '# Flat Run\n\n[![Lint](https://example.com/b.svg)](https://example.com)\n' >"${flat_run}/README.md"
 expect 0 "and without APP_DIR the server stays at the root" gen_in "${flat_run}" app --no-install
 expect 0 "with the image as it was" grep -qx 'COPY dist ./dist' "${flat_run}/Dockerfile"
 expect 0 "and the upload" grep -qx '!/dist/' "${flat_run}/.gcloudignore"
+expect 0 "a README of only badges falls back to the name" \
+    grep -qF "description: 'Flat Run'" "${flat_run}/src/config/site.ts"
+
+# A pnpm that records what gen.mjs installs. It goes first on the PATH mise exec builds.
+mkdir -p "${work}/recording"
+cat >"${work}/recording/pnpm" <<'PNPM'
+#!/usr/bin/env bash
+echo "$*" >>"${PNPM_LOG}"
+PNPM
+chmod +x "${work}/recording/pnpm"
+export PNPM_LOG="${work}/pnpm.log"
+installed="${work}/installed-shop"
+generated "${installed}"
+printf 'APP_DIR := apps/web\n' >>"${installed}/.devtools/Makefile"
+cp "${work}/workspace" "${installed}/pnpm-workspace.yaml"
+gen_recording() {
+    # shellcheck disable=SC2016 # $1 and PATH are for the inner shell, after mise has set PATH
+    (cd "${installed}" && mise exec -- bash -c 'PATH="$1:${PATH}" node .devtools/scripts/gen.mjs app' _ "${work}/recording")
+}
+expect 0 "installs a workspace's app" gen_recording
+expect 0 "with tailwindcss in the app's package, where shadcn looks" \
+    grep -qE '^add --save-dev [^-].* tailwindcss( |$)' "${PNPM_LOG}"
+expect 0 "and at the root, beside its Vite plugin" \
+    grep -qE '^add --save-dev --workspace-root .* tailwindcss( |$)' "${PNPM_LOG}"
 
 expect 2 "a directory that is not the template is an error, not drift" \
     .devtools/scripts/template-sync.sh --check --from "${work}"
