@@ -38,7 +38,8 @@ export const base = defineConfig([
 
 export const app = defineConfig([
   base,
-  globalIgnores(['src/routeTree.gen.ts']),
+  // Generated, or vendored: a fix in either would not survive the next regeneration.
+  globalIgnores(['src/routeTree.gen.ts', 'src/components/ui']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -50,22 +51,19 @@ export const app = defineConfig([
     languageOptions: { globals: globals.browser }
   },
   {
-    // shadcn/ui primitives export their variants next to the component, providers their
-    // use* hook, and route files their Route: none of that breaks Fast Refresh.
-    files: ['src/components/ui/**/*.{ts,tsx}', 'src/**/*-provider.tsx', 'src/routes/**/*.tsx'],
+    // Providers export their use* hook and route files their Route: neither breaks Fast Refresh.
+    files: ['src/**/*-provider.tsx', 'src/routes/**/*.tsx'],
     rules: { 'react-refresh/only-export-components': 'off' }
   },
   {
-    // The shadcn/ui primitives carry their own accessibility semantics.
     files: ['src/**/*.tsx'],
-    ignores: ['src/components/ui/**'],
     extends: [jsxA11y.flatConfigs.recommended]
   },
   {
     // Every string a person reads comes from src/locales/ through t(), whether or not the
     // app is translated yet: text in JSX, and the attributes that are read or announced.
     files: ['src/**/*.tsx'],
-    ignores: ['src/components/ui/**', 'src/**/*.test.tsx'],
+    ignores: ['src/**/*.test.tsx'],
     plugins: { i18next },
     rules: {
       'i18next/no-literal-string': [
