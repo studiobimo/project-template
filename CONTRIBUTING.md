@@ -41,7 +41,7 @@ a lowercase subject with no full stop, and at most 100 characters in the header 
 body line.
 
 PRs are **squash-merged**, so the **PR title** must also be a Conventional Commit.
-It becomes the commit on `main` that release-please reads.
+It becomes the commit the project's release tooling reads.
 
 ### Issues: titled like the commit that closes them
 
@@ -78,7 +78,7 @@ weekly workflow opens an issue when something does. A deliberate difference goes
 ignored, and a change to `.template-ignore` or `.template-profiles` needs the fleet's owners to
 review it.
 
-Projects only receive a change at a release, and release-please releases only `fix`, `feat` and
+Projects only receive a change at a release, and a release is cut only for `fix`, `feat` and
 breaking commits. A change to a managed file titled `chore`, `docs` or `ci` merges but never reaches
 `sync`, so title it `fix` or `feat`.
 <!-- <<< template:workflow -->
@@ -91,7 +91,9 @@ Never edit a version by hand. Until 1.0.0, breaking changes bump the minor versi
 
 ## Repository settings (maintainers)
 
-`main` is protected by rulesets: PRs required, squash-only, linear history, and required checks
-`pr-checks` and `lint`. They and the other repository settings are defined in `studiobimo/.github`.
+Where GitHub offers them, rulesets protect `main`: PRs required, squash-only, linear history, and
+required checks `pr-checks` and `lint`. A private repository on the Free plan gets none of that, so
+`main` takes direct pushes and only the local hooks and the agent guard hold these rules.
+The rulesets and the other repository settings are defined in `studiobimo/.github`.
 `make -C .devtools github` applies them to this repository and needs `gh` signed in as an admin;
-`make -C .devtools github CHECK=1` only shows what differs.
+`make -C .devtools github CHECK=1` only shows what differs, and what the plan does not offer.

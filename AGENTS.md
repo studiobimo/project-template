@@ -55,8 +55,8 @@ violation is caught before it is reviewed.
   `codex/…`.
 - **PR size:** at most 20 changed files. Split bigger work with `gh stack`
   (`gh stack init`, `gh stack add`, `gh stack submit`).
-- **Versioning:** SemVer, managed by release-please. Never edit a version, a
-  `.release-please-manifest.json` or a `CHANGELOG.md` by hand.
+- **Versioning:** SemVer, set by the project's release tooling. Never edit a version, create a
+  tag, or write a `CHANGELOG.md` or release manifest by hand.
 - **Pinning:** third-party GitHub Actions are pinned to full commit SHAs with the version in a
   comment; studiobimo's own reusable workflows are called at `@v1`. Every tool is pinned in
   `mise.toml` and locked in `mise.lock`. Dependabot does not read `mise.toml`: a tool is bumped by
