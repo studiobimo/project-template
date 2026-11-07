@@ -1,5 +1,20 @@
 # Changelog
 
+## [0.7.0](https://github.com/studiobimo/project-template/compare/v0.6.0...v0.7.0) (2026-11-07)
+
+
+### Features
+
+* **ci:** report outdated mise tools weekly ([#50](https://github.com/studiobimo/project-template/issues/50)) ([13a19b9](https://github.com/studiobimo/project-template/commit/13a19b98f0b6659bd631809febfb1a08b6671881))
+
+
+### Bug Fixes
+
+* **ci:** let a project name its own dependabot target branch ([#46](https://github.com/studiobimo/project-template/issues/46)) ([7f40e9c](https://github.com/studiobimo/project-template/commit/7f40e9cea1302003834add53c1edab135cab9191))
+* **devtools:** leave src/components/ui out of the eslint config ([#48](https://github.com/studiobimo/project-template/issues/48)) ([c4c3d46](https://github.com/studiobimo/project-template/commit/c4c3d4608824903494bf2d33b5351429631cf685))
+* **devtools:** skip badges in the description and list tailwindcss in the app ([#47](https://github.com/studiobimo/project-template/issues/47)) ([946e309](https://github.com/studiobimo/project-template/commit/946e30917aeb5a41ef5f2d8380b39c6d375b2ed1))
+* **docs:** say what a private repository gets and stop naming release-please ([#49](https://github.com/studiobimo/project-template/issues/49)) ([d46b2f5](https://github.com/studiobimo/project-template/commit/d46b2f52f7c21bd66ab9d3c22b3a23cbcec2586c))
+
 ## [0.6.0](https://github.com/studiobimo/project-template/compare/v0.5.0...v0.6.0) (2026-11-02)
 
 
