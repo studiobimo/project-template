@@ -146,7 +146,7 @@ manages and what stays per project.
   `dist/server`, serves the client and answers `/api/*`. OpenTofu in `infra/` sets up the
   development and production services, their accounts and Workload Identity Federation, and
   a deploy workflow ships `develop` to development and each release to production, with no
-  key stored anywhere:
+  key stored anywhere. `DEPLOY_ENVS := production` drops development here too:
 
   ```sh
   echo gcp >> .template-profiles
