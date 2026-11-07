@@ -33,8 +33,10 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
 
-// vite.mk's APP_DIR, read from the line in the project's Makefile that sets it.
-const appDir = read('.devtools/Makefile').match(/^APP_DIR\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
+// vite.mk's APP_DIR, read from the line in the project's Makefile that sets it, or the first
+// app of APPS when the workspace has several.
+const appDir =
+  read('.devtools/Makefile').match(/^(?:APP_DIR|APPS)\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
 const app = join(root, appDir)
 const workspace = appDir !== '.'
 

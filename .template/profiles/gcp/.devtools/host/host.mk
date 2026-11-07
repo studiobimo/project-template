@@ -20,13 +20,13 @@ setting = $$(cd $(ROOT) && $(MISE) exec -- node -p "require('./infra/project.aut
 
 .PHONY: build-server start deploy node-image-check infra-fmt infra-fmt-check infra-bootstrap infra-plan infra-apply infra-github
 
-build: build-server
+build-app: build-server
 ci: node-image-check infra-fmt-check
 
 build-server: ## Bundle server/index.ts and what it imports into dist/server/index.mjs
 	$(APP_PNPM) exec vite build --config $(ROOT)/.devtools/host/server.ts
 
-start: build ## Run the production build as Cloud Run runs it, on PORT or 8080
+start: build-app ## Run the production build as Cloud Run runs it, on PORT or 8080
 	$(APP_CD) && $(MISE) exec -- node --enable-source-maps dist/server/index.mjs
 
 # The image copies Node from the official image's exact tag; mise.toml pins the Node that

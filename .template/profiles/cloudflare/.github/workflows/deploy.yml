@@ -1,6 +1,7 @@
 name: Deploy
 
-# Deploys the Worker with `make -C .devtools deploy`, the target a developer runs:
+# Deploys the Worker, or each app's Worker when APPS lists several, with
+# `make -C .devtools deploy`, the target a developer runs:
 #
 #   push to main            -> staging
 #   a release               -> production, from release.yml (below)

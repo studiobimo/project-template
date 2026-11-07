@@ -8,19 +8,25 @@ WRANGLER = $(APP_PNPM) exec wrangler
 BUNDLE_DIR := dist/client
 TSC_PROJECTS += worker
 
-.PHONY: types deploy
+.PHONY: types types-app deploy deploy-app
 
 # The Env type is generated, not committed. Secret names come from .dev.vars.example, so CI,
 # which has no .dev.vars, types the same Env as a laptop does.
-types: ## Generate the Worker's Env type, worker/worker-configuration.d.ts, from wrangler.jsonc
+types: ## Generate each Worker's Env type, worker/worker-configuration.d.ts, from wrangler.jsonc
+	$(call each-app,types-app)
+
+types-app:
 	$(WRANGLER) types worker/worker-configuration.d.ts --env-file .dev.vars.example
 
-typecheck: types
+typecheck-app: types-app
 
 # The plugin writes the chosen environment's config into dist/ at build time, and wrangler
 # deploys what dist/ says. Building and deploying in one target is what keeps a staging
-# build from going out under the production name.
-deploy: ## Build for ENV (staging or production) and deploy it
+# build from going out under the production name. An app that fails stops the rest.
+deploy: ## Build every app for ENV (staging or production) and deploy it
 	$(require-deploy-env)
-	CLOUDFLARE_ENV=$(ENV) $(MAKE) --no-print-directory build
+	$(call each-app,deploy-app)
+
+deploy-app:
+	CLOUDFLARE_ENV=$(ENV) $(MAKE) --no-print-directory build-app
 	$(WRANGLER) deploy
