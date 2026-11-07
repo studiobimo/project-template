@@ -46,6 +46,12 @@ is inside it. Its `package.json` lists what the app imports. The root's lists th
 `.devtools/` imports, since those resolve from the root. `.prettierignore` stays at the root.
 Run `pnpm exec shadcn` from `APP_DIR`.
 
+With more than one app, list them in `APPS` instead (`APPS := apps/admin apps/site`). `build`,
+`typecheck`, `budget`, `clean` and the host's `types` and `deploy` then run once per app and stop
+at the first that fails; `dev` and `preview` take the first. `APP=apps/site` narrows any of them
+to one app. Give an app its own budget with `BUNDLE_DIR@apps/site`, `BUNDLE_CHUNK_KIB@apps/site`
+or `BUNDLE_TOTAL_KIB@apps/site`. `gen.mjs` writes the first app.
+
 Every other package brings its own `eslint.config.js` and `vitest.config.ts`, on the shared
 `base` of each, and adds what only it needs. ESLint uses the nearest config to each file, and
 `make -C .devtools test` runs every package that has a Vitest config. `tsc` reaches a package

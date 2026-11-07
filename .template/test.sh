@@ -278,14 +278,31 @@ expect 0 "beside the catalogs it found there" test -f "${shop}/apps/web/src/loca
 expect 0 "and routes that load them" gen_in "${shop}" route /invoices --feature invoices
 expect 0 "at the app's own path" test -f "${shop}/apps/web/src/routes/invoices.tsx"
 
-# make reads APP_DIR on either side of the include, as gen.mjs does. `types` is the host's.
+# make reads APP_DIR on either side of the include, as gen.mjs does. `types-app` is the host's.
 runs_in_app() { make -n --no-print-directory -C "${shop}/.devtools" -f "$1" "$2" | grep -q 'cd .*/apps/web'; }
 printf 'APP_DIR := apps/web\ninclude base.mk\ninclude vite.mk\n' >"${shop}/.devtools/above.mk"
 printf 'include base.mk\ninclude vite.mk\nAPP_DIR := apps/web\n' >"${shop}/.devtools/below.mk"
 expect 0 "make runs in APP_DIR when it is set above the include" runs_in_app above.mk dev
 expect 0 "and when it is set below" runs_in_app below.mk dev
-expect 0 "the host's recipes too" runs_in_app below.mk types
+expect 0 "the host's recipes too" runs_in_app below.mk types-app
 rm "${shop}/.devtools/above.mk" "${shop}/.devtools/below.mk"
+
+# APPS lists several apps: the app-level targets run once for each, APP narrows them to one,
+# and a budget can be set for a single app.
+printf 'APPS := apps/web apps/site\nBUNDLE_TOTAL_KIB@apps/site := 200\ninclude base.mk\ninclude vite.mk\n' \
+    >"${shop}/.devtools/many.mk"
+many() { make -n --no-print-directory -C "${shop}/.devtools" -f many.mk "$@"; }
+many_has() { many "${@:2}" | grep -q -- "$1"; }
+for target in build typecheck budget types clean; do
+    expect 0 "${target} runs for every app in APPS" many_has 'for app in apps/web apps/site' "${target}"
+done
+expect 0 "deploy does too" many_has 'for app in apps/web apps/site' deploy ENV=staging
+expect 0 "APP narrows a target to one app" many_has 'for app in apps/site;' build APP=apps/site
+expect 0 "dev takes the first app" many_has 'cd .*/apps/web' dev
+expect 0 "dev takes the app APP names" many_has 'cd .*/apps/site' dev APP=apps/site
+expect 0 "one app's budget can differ" many_has '--total-kib 200' budget-app APP_DIR=apps/site
+expect 0 "while the others keep the default" many_has '--total-kib 550' budget-app APP_DIR=apps/web
+rm "${shop}/.devtools/many.mk"
 
 flat="${work}/flat-shop"
 generated "${flat}"
