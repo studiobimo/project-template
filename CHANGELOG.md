@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.9.0](https://github.com/studiobimo/project-template/compare/v0.8.0...v0.9.0) (2026-11-07)
+
+
+### Features
+
+* **devtools:** deploy production only, without a development environment or a develop branch ([#61](https://github.com/studiobimo/project-template/issues/61)) ([889dcd6](https://github.com/studiobimo/project-template/commit/889dcd63f4917b733bb45799e52d8d6167be1e61))
+* **devtools:** make every workspace package extend the full shared config ([#64](https://github.com/studiobimo/project-template/issues/64)) ([c74f561](https://github.com/studiobimo/project-template/commit/c74f561b3d48803db5f3e8d287faba4bcfc89879))
+
 ## [0.8.0](https://github.com/studiobimo/project-template/compare/v0.7.0...v0.8.0) (2026-11-07)
 
 
