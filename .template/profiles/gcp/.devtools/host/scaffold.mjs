@@ -16,7 +16,7 @@ const uploadOnly = (path) =>
     })
     .join('\n')
 
-export default ({ slug, appDir, repo }) => ({
+export default ({ slug, appDir, repo, deployEnvs }) => ({
   dependencies: ['hono', '@hono/node-server'],
   // .devtools/host/vite.ts imports them, and Node resolves that upward from .devtools/.
   devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
@@ -25,7 +25,7 @@ export default ({ slug, appDir, repo }) => ({
     'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
     'make -C .devtools infra-apply         # the services, their accounts, Workload Identity',
     'make -C .devtools infra-github        # the repository variables deploy.yml signs in with',
-    'make -C .devtools deploy ENV=development # <service>-development, from this machine'
+    `make -C .devtools deploy ENV=${deployEnvs[0]} # <service>-${deployEnvs[0]}, from this machine`
   ],
   files: {
     'server/tsconfig.json': `{
@@ -266,7 +266,7 @@ variable "region" {
 }
 
 variable "service" {
-  description = "The Cloud Run service's name, before -development or -production."
+  description = "The Cloud Run service's name, before -<environment>."
   type        = string
 }
 
@@ -296,7 +296,7 @@ variable "members" {
 }
 `,
     'infra/main.tf': `locals {
-  environments = toset(["development", "production"])
+  environments = toset([${deployEnvs.map((name) => `"${name}"`).join(', ')}])
   private      = length(var.members) > 0
 }
 
@@ -536,7 +536,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository"  = "assertion.repository"
     "attribute.environment" = "assertion.environment"
   }
-  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in ['development', 'production']"
+  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in [${deployEnvs.map((name) => `'${name}'`).join(', ')}]"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"

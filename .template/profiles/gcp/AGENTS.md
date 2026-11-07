@@ -23,8 +23,10 @@ others stay at the root, where the `Dockerfile` copies `<APP_DIR>/dist` into the
   needs the `mise.toml` bump and `make -C .devtools lock` pushed onto it.
 - **Infrastructure is OpenTofu, in `infra/`.** One GCP project per app, named in
   `infra/project.auto.tfvars.json` with the region and service name, which make reads too.
-  It creates `<service>-development` and `<service>-production`, each running as its own
-  account with no roles; grant one what its service uses, in `infra/`. Environment
+  It creates `<service>-development` and `<service>-production`, or one per entry of
+  `DEPLOY_ENVS` in `.devtools/Makefile` when it was set before `gen.mjs` wrote `infra/`
+  (`DEPLOY_ENVS := production` for a project with no development or `develop`), each running
+  as its own account with no roles; grant one what its service uses, in `infra/`. Environment
   variables and secrets go on the service there too, never in the image. Requests time
   out after 60 seconds, production runs at most 3 instances and development 2, and a new
   revision gets traffic only once `/api/health` answers. A budget on the billing account
@@ -41,9 +43,9 @@ others stay at the root, where the `Dockerfile` copies `<APP_DIR>/dist` into the
   Build make the image and Cloud Run roll it out. It refuses to run from any branch but the
   one its environment ships from: `develop` for development, `main` for production.
   `deploy.yml` runs the same target: on a push to `develop` to development, and to
-  production when `release.yml` calls it for a release. It signs in with Workload Identity
-  Federation, no key, and only jobs in a GitHub environment named `development` or
-  `production` can. `make -C .devtools infra-github` sets the two repository variables it
+  production when `release.yml` calls it for a release. A run from Actions defaults to the
+  first environment in `DEPLOY_ENVS`. It signs in with Workload Identity Federation, no key,
+  and only jobs in a GitHub environment named after one of its environments can. `make -C .devtools infra-github` sets the two repository variables it
   needs.
 - **Server tests** sit beside the code as `server/**/*.test.ts` and call
   `app.request(path)` in Node.

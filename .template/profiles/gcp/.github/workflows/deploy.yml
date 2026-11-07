@@ -6,6 +6,11 @@ name: Deploy
 #   a release               -> production, from release.yml (below)
 #   run it from Actions     -> either, from the branch that environment ships from
 #
+# The environments are the ones DEPLOY_ENVS lists in the project's Makefile, development and
+# production unless it says otherwise. A project with only production sets
+# `DEPLOY_ENVS := production`: a push to develop then deploys nothing, and a run from Actions
+# with environment "auto", the default, deploys the first one listed.
+#
 # It signs in to GCP with Workload Identity Federation, so no key is stored anywhere. It
 # reads two repository variables, GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT,
 # which `make -C .devtools infra-github` sets; until they are set it skips. Each run is in a
@@ -35,29 +40,65 @@ on:
       environment:
         description: Where to deploy
         type: choice
-        options: [development, production]
-        default: development
+        options: [auto, development, production]
+        default: auto
   workflow_call:
     inputs:
       environment:
-        description: development or production
+        description: development or production, one of DEPLOY_ENVS
         type: string
         required: true
 
 permissions: {}
 
 jobs:
-  deploy:
+  # Names the environment before the deploy job starts, since a job's environment is fixed
+  # before its steps run. Empty when there is nothing to deploy.
+  plan:
     if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
     runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      environment: ${{ steps.pick.outputs.environment }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Pick the environment
+        id: pick
+        env:
+          REQUESTED: ${{ inputs.environment }}
+        run: |
+          envs="$(make -C .devtools --no-print-directory -s deploy-envs)"
+          case "${REQUESTED}" in
+            auto) read -r pick _ <<<"${envs}" ;;
+            '') pick=development ;;
+            *) pick="${REQUESTED}" ;;
+          esac
+          case " ${envs} " in
+            *" ${pick} "*) echo "environment=${pick}" >>"${GITHUB_OUTPUT}"; exit 0 ;;
+          esac
+          if [ -n "${REQUESTED}" ]; then
+            echo "::error::${pick} is not one of: ${envs}"
+            exit 1
+          fi
+          echo "No ${pick} environment in: ${envs}"
+
+  deploy:
+    needs: plan
+    if: needs.plan.outputs.environment != ''
+    runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ inputs.environment || 'development' }}
+    environment: ${{ needs.plan.outputs.environment }}
     permissions:
       contents: read
       id-token: write
     # One deploy per environment at a time, each run to the end: a newer one queues.
     concurrency:
-      group: deploy-${{ inputs.environment || 'development' }}
+      group: deploy-${{ needs.plan.outputs.environment }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -86,5 +127,5 @@ jobs:
 
       - name: make deploy
         env:
-          DEPLOY_ENV: ${{ inputs.environment || 'development' }}
+          DEPLOY_ENV: ${{ needs.plan.outputs.environment }}
         run: make -C .devtools deploy ENV="${DEPLOY_ENV}"

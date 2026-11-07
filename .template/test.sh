@@ -238,6 +238,10 @@ expect 0 "naming the Cloud Run service after the project" \
     grep -qF '"service": "profile-vite-react-tanstack"' "${vite}/infra/project.auto.tfvars.json"
 expect 0 "with an image on the Node mise.toml pins" \
     grep -q "^FROM node:$(sed -n 's/^node = "\(.*\)"/\1/p' mise.toml)-" "${vite}/Dockerfile"
+expect 0 "with a service for each environment DEPLOY_ENVS lists" \
+    grep -qF 'environments = toset(["production"])' "${vite}/infra/main.tf"
+expect 0 "and only those let in to deploy" \
+    grep -qF "assertion.environment in ['production']" "${vite}/infra/main.tf"
 
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }
@@ -339,6 +343,8 @@ expect 0 "writes the Cloud Run server into APP_DIR" gen_in "${run}" app --no-ins
 expect 0 "reaching the shared tsconfig from there" \
     grep -qF '"../../../.devtools/vite/tsconfig.base.json"' "${run}/apps/web/server/tsconfig.json"
 expect 0 "and keeps what deploys it at the root" test -f "${run}/infra/main.tf"
+expect 0 "with both environments by default" \
+    grep -qF 'environments = toset(["development", "production"])' "${run}/infra/main.tf"
 expect 0 "with an image of the app's build" grep -qx 'COPY apps/web/dist ./dist' "${run}/Dockerfile"
 expect 0 "and that build let back in, parent by parent" \
     grep -qx '!/apps/web/dist/' "${run}/.gcloudignore"
