@@ -1,5 +1,17 @@
 # Changelog
 
+## [0.8.0](https://github.com/studiobimo/project-template/compare/v0.7.0...v0.8.0) (2026-11-07)
+
+
+### ⚠ BREAKING CHANGES
+
+* **devtools:** deploy to development and production, named after their branches ([#58](https://github.com/studiobimo/project-template/issues/58))
+
+### Features
+
+* **devtools:** build, budget and deploy more than one app in a workspace ([#56](https://github.com/studiobimo/project-template/issues/56)) ([0a4f911](https://github.com/studiobimo/project-template/commit/0a4f911cb6349736a256d53df33b2bd0b358c026))
+* **devtools:** deploy to development and production, named after their branches ([#58](https://github.com/studiobimo/project-template/issues/58)) ([08449a2](https://github.com/studiobimo/project-template/commit/08449a200df3f7d9c0f0031f64b1a9b1ee15bce6))
+
 ## [0.7.0](https://github.com/studiobimo/project-template/compare/v0.6.0...v0.7.0) (2026-11-07)
 
 
