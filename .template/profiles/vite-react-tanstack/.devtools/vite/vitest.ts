@@ -6,20 +6,31 @@
 //
 //   export default defineConfig({ test: { projects: await projects() } })
 //
-// Any other workspace package has a vitest.config.ts of its own, on `base`, which `make test`
-// runs too:
+// `base` is the React setup (jsdom, Testing Library's matchers from src/test/setup.ts, the
+// React plugin), and what every other workspace package runs on. `make test` runs a package
+// with no vitest.config.ts on `base` as it is; one with a config of its own extends it and
+// overrides what differs, say the environment of a package that is not React:
 //
-//   export default mergeConfig(base, defineConfig({ test: { environment: 'jsdom' } }))
+//   export default mergeConfig(base, defineConfig({ test: { environment: 'node' } }))
+import { existsSync } from 'node:fs'
+
 import react from '@vitejs/plugin-react'
 import type { TestProjectInlineConfiguration } from 'vitest/config'
 
 import { hosting } from './vite.ts'
 
+const setup = './src/test/setup.ts'
+
 export const base: TestProjectInlineConfiguration = {
   resolve: { tsconfigPaths: true },
+  plugins: [react()],
   test: {
     include: ['src/**/*.test.{ts,tsx}'],
-    restoreMocks: true
+    restoreMocks: true,
+    environment: 'jsdom',
+    globals: true,
+    setupFiles: existsSync(setup) ? [setup] : [],
+    css: true
   }
 }
 
@@ -28,16 +39,5 @@ export async function projects(): Promise<TestProjectInlineConfiguration[]> {
 }
 
 export function client(): TestProjectInlineConfiguration {
-  return {
-    ...base,
-    plugins: [react()],
-    test: {
-      ...base.test,
-      name: 'client',
-      environment: 'jsdom',
-      globals: true,
-      setupFiles: ['./src/test/setup.ts'],
-      css: true
-    }
-  }
+  return { ...base, test: { ...base.test, name: 'client' } }
 }

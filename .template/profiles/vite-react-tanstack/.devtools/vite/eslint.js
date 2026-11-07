@@ -1,12 +1,17 @@
 // Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
 //
-// The shared ESLint rules, with the hosting profile's from .devtools/host/eslint.js when
-// there is one. eslint.config.js spreads them and adds the project's own:
+// The shared ESLint rules in layers, each extending the one before. eslint.config.js picks
+// one and adds the project's own:
 //
 //   export default defineConfig([app, { files: ['src/**/*.tsx'], rules: { ... } }])
 //
-// `app` is the React app's. `base` is what any other workspace package extends the same way,
-// from an eslint.config.js of its own: ESLint uses the nearest one to each file.
+//   base   TypeScript and Node scripts: the root's config, for what no package covers
+//   react  base, and what any React package needs: hooks, accessibility, strings in catalogs
+//   app    react, and what only the Vite app has: Fast Refresh, the router, the host's rules
+//
+// Every workspace package extends `react` from an eslint.config.js of its own, as the app
+// extends `app`: ESLint uses the nearest one to each file. A package that is not React, or is
+// exempt from a rule, turns that rule off in its own config, where it can be seen.
 import { existsSync } from 'node:fs'
 
 import js from '@eslint/js'
@@ -36,24 +41,14 @@ export const base = defineConfig([
   }
 ])
 
-export const app = defineConfig([
+export const react = defineConfig([
   base,
-  // Generated, or vendored: a fix in either would not survive the next regeneration.
-  globalIgnores(['src/routeTree.gen.ts', 'src/components/ui']),
+  // Vendored: a fix would not survive the next `shadcn add`.
+  globalIgnores(['src/components/ui']),
   {
     files: ['**/*.{ts,tsx}'],
-    extends: [
-      reactHooks.configs.flat.recommended,
-      reactRefresh.configs.vite,
-      pluginQuery.configs['flat/recommended'],
-      pluginRouter.configs['flat/recommended']
-    ],
+    extends: [reactHooks.configs.flat.recommended, pluginQuery.configs['flat/recommended']],
     languageOptions: { globals: globals.browser }
-  },
-  {
-    // Providers export their use* hook and route files their Route: neither breaks Fast Refresh.
-    files: ['src/**/*-provider.tsx', 'src/routes/**/*.tsx'],
-    rules: { 'react-refresh/only-export-components': 'off' }
   },
   {
     files: ['src/**/*.tsx'],
@@ -86,6 +81,21 @@ export const app = defineConfig([
         }
       ]
     }
+  }
+])
+
+export const app = defineConfig([
+  react,
+  // Generated: a fix would not survive the next build.
+  globalIgnores(['src/routeTree.gen.ts']),
+  {
+    files: ['**/*.{ts,tsx}'],
+    extends: [reactRefresh.configs.vite, pluginRouter.configs['flat/recommended']]
+  },
+  {
+    // Providers export their use* hook and route files their Route: neither breaks Fast Refresh.
+    files: ['src/**/*-provider.tsx', 'src/routes/**/*.tsx'],
+    rules: { 'react-refresh/only-export-components': 'off' }
   },
   ...host
 ])

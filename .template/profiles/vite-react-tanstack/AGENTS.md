@@ -52,29 +52,58 @@ at the first that fails; `dev` and `preview` take the first. `APP=apps/site` nar
 to one app. Give an app its own budget with `BUNDLE_DIR@apps/site`, `BUNDLE_CHUNK_KIB@apps/site`
 or `BUNDLE_TOTAL_KIB@apps/site`. `gen.mjs` writes the first app.
 
-Every other package brings its own `eslint.config.js` and `vitest.config.ts`, on the shared
-`base` of each, and adds what only it needs. ESLint uses the nearest config to each file, and
-`make -C .devtools test` runs every package that has a Vitest config. `tsc` reaches a package
-through its imports; for the rest, give it a `tsconfig.json` that extends
-`.devtools/vite/tsconfig.base.json` and add it to `TSC_PROJECTS` in `.devtools/Makefile`, after
-`include vite.mk`, as `../../packages/<name>`.
+Every other package extends the same presets as the app, so it gets every shared check without
+opting in to each. ESLint uses the nearest config to each file, and `make -C .devtools` finds a
+package by its `src/`, not from a list:
+
+- **ESLint:** `react` is the app's `app` without what only a Vite app has (Fast Refresh, the
+  router). A hardcoded string in a `.tsx` file fails in any package.
+- **Vitest:** `base` is the React setup: jsdom, `globals`, the React plugin, `src/test/setup.ts`
+  when there is one. `make test` runs a package with no `vitest.config.ts` on it as it is.
+- **tsc:** `make typecheck` runs `tsc -b` in a package that has a `src/`, and fails when it has
+  no `tsconfig.json`. No list to edit.
+- **Apps:** a package with a `vite.config.ts` that is not in `APPS` (or `APP_DIR`) fails
+  `make budget`, so an app cannot go without a build and a budget.
+
+A new package needs a `package.json`, and these two files for the default case:
 
 ```js
 // packages/<name>/eslint.config.js
 import { defineConfig } from 'eslint/config'
 
-import { base } from '../../.devtools/vite/eslint.js'
+import { react } from '../../.devtools/vite/eslint.js'
 
-export default defineConfig([base, { rules: {} }])
+export default defineConfig([react])
+```
+
+```json
+// packages/<name>/tsconfig.json
+{ "extends": "../../.devtools/vite/tsconfig.package.json" }
+```
+
+What is particular to a package is an override in its own config, where it can be seen. A package
+that is not React, or is exempt, turns off what does not apply:
+
+```js
+// packages/<name>/eslint.config.js: a library with no UI
+export default defineConfig([react, { rules: { 'i18next/no-literal-string': 'off' } }])
+```
+
+```json
+// packages/<name>/tsconfig.json: runs in Node, not a browser
+{
+  "extends": "../../.devtools/vite/tsconfig.package.json",
+  "compilerOptions": { "lib": ["ES2023"], "types": ["node", "vitest/globals"] }
+}
 ```
 
 ```ts
-// packages/<name>/vitest.config.ts
+// packages/<name>/vitest.config.ts: only when the default is not enough
 import { defineConfig, mergeConfig } from 'vitest/config'
 
 import { base } from '../../.devtools/vite/vitest.ts'
 
-export default mergeConfig(base, defineConfig({ test: {} }))
+export default mergeConfig(base, defineConfig({ test: { environment: 'node' } }))
 ```
 
 ### Conventions

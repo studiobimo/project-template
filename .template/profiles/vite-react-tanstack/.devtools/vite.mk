@@ -29,8 +29,15 @@ BUNDLE_DIR ?= dist
 BUNDLE_CHUNK_KIB ?= 450
 BUNDLE_TOTAL_KIB ?= 550
 
-# The tsc -b projects, from APP_DIR: its tsconfig.json references the app's and the configs'.
+# The tsc -b projects of an app, from APP_DIR: its tsconfig.json references the app's and the
+# configs', and a hosting profile adds its own. Every other workspace package is found by its
+# src/ and checked on its own tsconfig.json.
 TSC_PROJECTS := .
+
+# The checks every workspace package gets, by what it has: scripts/packages.mjs runs in each
+# one. They tell the apps from the other packages by ALL_APPS, which APP does not narrow.
+PACKAGES = $(PNPM) --recursive exec node $(ROOT)/.devtools/scripts/packages.mjs
+ALL_APPS = $(or $(APPS),$(APP_DIR))
 
 # Prettier and ESLint run from the root, as the hooks do, so they cover a workspace's every
 # package. Prettier only formats the web sources. Markdown, YAML and JSON belong to the shared
@@ -89,11 +96,12 @@ build-app:
 preview: build-app ## Serve the production build locally
 	$(APP_PNPM) exec vite preview
 
-test: ## Unit tests, once, in every package with a vitest.config.ts
-	$(PNPM) --recursive exec sh -c '[ ! -f vitest.config.ts ] || vitest run'
+test: ## Unit tests, once, in every package with a src/
+	$(PACKAGES) test
 
-typecheck: ## Type-check every tsconfig project reference, in every app
+typecheck: ## Type-check every app's tsconfig project references, and every other package's tsconfig.json
 	$(call each-app,typecheck-app)
+	$(PACKAGES) typecheck $(ALL_APPS)
 
 typecheck-app:
 	$(APP_PNPM) exec tsc -b $(TSC_PROJECTS)
@@ -108,6 +116,7 @@ fmt-check: ## Fail on web sources Prettier would change
 	$(PNPM) exec prettier --check --log-level=warn $(PRETTIER_FILES)
 
 budget: ## Fail if a client chunk or the whole bundle of any app outgrows its budget (after build)
+	$(PACKAGES) apps $(ALL_APPS)
 	$(call each-app,budget-app)
 
 budget-app:
