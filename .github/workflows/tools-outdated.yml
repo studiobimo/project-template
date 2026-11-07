@@ -1,0 +1,19 @@
+name: Tools outdated
+
+on:
+  schedule:
+    - cron: '41 6 * * 1'
+  workflow_dispatch:
+
+permissions: {}
+
+concurrency:
+  group: tools-outdated
+  cancel-in-progress: false
+
+jobs:
+  tools:
+    permissions:
+      contents: read
+      issues: write
+    uses: studiobimo/.github/.github/workflows/ci-tools-outdated.yml@v1
