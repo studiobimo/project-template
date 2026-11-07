@@ -296,7 +296,7 @@ many_has() { many "${@:2}" | grep -q -- "$1"; }
 for target in build typecheck budget types clean; do
     expect 0 "${target} runs for every app in APPS" many_has 'for app in apps/web apps/site' "${target}"
 done
-expect 0 "deploy does too" many_has 'for app in apps/web apps/site' deploy ENV=staging
+expect 0 "deploy does too" many_has 'for app in apps/web apps/site' deploy ENV=development
 expect 0 "APP narrows a target to one app" many_has 'for app in apps/site;' build APP=apps/site
 expect 0 "dev takes the first app" many_has 'cd .*/apps/web' dev
 expect 0 "dev takes the app APP names" many_has 'cd .*/apps/site' dev APP=apps/site
@@ -389,15 +389,15 @@ setup=(.devtools/scripts/github-setup.sh --from "${work}/settings")
 called() { grep -qxF -- "$1" "${GH_LOG}"; }
 
 : >"${GH_LOG}"
-expect 1 "--check reports what is missing" env DESC="A widget." ENVS=staging "${setup[@]}" --check
+expect 1 "--check reports what is missing" env DESC="A widget." ENVS=development "${setup[@]}" --check
 expect 0 "and asks the shared script only to compare" called "shared ORG=acme --check widget"
 expect 1 "and changes nothing" grep -qv '^shared ' "${GH_LOG}"
 
 : >"${GH_LOG}"
-expect 0 "applies the setup" env DESC="A widget." ENVS=staging "${setup[@]}"
+expect 0 "applies the setup" env DESC="A widget." ENVS=development "${setup[@]}"
 expect 0 "runs the shared settings for this repository" called "shared ORG=acme widget"
 expect 0 "sets the description" called "repo edit acme/widget --description A widget."
-expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/staging"
+expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/development"
 
 : >"${GH_LOG}"
 expect 0 "leaves the description alone unless asked" "${setup[@]}"

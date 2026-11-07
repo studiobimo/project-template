@@ -10,7 +10,7 @@
 #   --ref <ref>  tag or branch of the settings repo to use (default: v1)
 #
 #   DESC="..."                 also set the repository description
-#   ENVS="staging production"  also create these deployment environments
+#   ENVS="development production"  also create these deployment environments
 #
 # The settings and rulesets are not in this file. They live in studiobimo/.github
 # (settings/ and rulesets/), next to the script that applies them, so every

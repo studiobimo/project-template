@@ -37,9 +37,12 @@ TSC_PROJECTS := .
 # hooks, and many of those files are managed: formatting them here would be drift.
 PRETTIER_FILES := '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
 
-# The environments a hosting profile's deploy target takes, as ENV=<one of them>, and the
-# recipe line that stops the target unless it was given one.
-DEPLOY_ENVS := staging production
+# Every hosting profile deploys to these two environments, and each ships from one branch, so a
+# laptop cannot put a feature branch on production. A hosting profile's deploy target takes
+# ENV=<one of them>; the recipe line stops it unless it was given one.
+DEPLOY_ENVS := development production
+DEPLOY_BRANCH_development := develop
+DEPLOY_BRANCH_production := main
 space := $(subst ,, )
 deploy-env-pattern = $(subst $(space),|,$(DEPLOY_ENVS))
 require-deploy-env = @case "$(ENV)" in $(deploy-env-pattern)) ;; \
@@ -48,7 +51,16 @@ require-deploy-env = @case "$(ENV)" in $(deploy-env-pattern)) ;; \
 MSG_ROUTES_STALE := $(GLYPH_FAIL) src/routeTree.gen.ts was stale and the build rewrote it: commit it
 MSG_DEPLOY_USAGE = $(GLYPH_FAIL) usage: $(DEVTOOLS) deploy ENV=$(deploy-env-pattern)
 
-.PHONY: install dev build build-app preview test typecheck typecheck-app eslint fmt fmt-check budget budget-app audit playwright-install ci check lock clean clean-app
+# A run from Actions has GITHUB_REF_NAME, the branch it started on: a checkout of a push is
+# detached, so git would name no branch there.
+deploy-branch:
+	$(require-deploy-env)
+	@branch=$${GITHUB_REF_NAME:-$$(git branch --show-current)}; \
+	[ "$$branch" = "$(DEPLOY_BRANCH_$(ENV))" ] || { \
+		echo "$(GLYPH_FAIL) $(ENV) ships from $(DEPLOY_BRANCH_$(ENV)), not $$branch" >&2; \
+		exit 1; }
+
+.PHONY: install dev build build-app preview test typecheck typecheck-app eslint fmt fmt-check budget budget-app audit playwright-install ci check lock clean clean-app deploy-branch
 
 install: ## Install the packages pnpm-lock.yaml pins
 	$(PNPM) install --frozen-lockfile

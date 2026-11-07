@@ -25,7 +25,7 @@ export default ({ slug, appDir, repo }) => ({
     'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
     'make -C .devtools infra-apply         # the services, their accounts, Workload Identity',
     'make -C .devtools infra-github        # the repository variables deploy.yml signs in with',
-    'make -C .devtools deploy ENV=staging  # <service>-staging, from this machine'
+    'make -C .devtools deploy ENV=development # <service>-development, from this machine'
   ],
   files: {
     'server/tsconfig.json': `{
@@ -93,7 +93,7 @@ const cache = createMiddleware(async (c, next) => {
   }
 })
 
-// Asks search engines to leave the site out: for staging, which is public too.
+// Asks search engines to leave the site out: for development, which is public too.
 const noindex = createMiddleware(async (c, next) => {
   await next()
   c.header('X-Robots-Tag', 'noindex')
@@ -180,7 +180,7 @@ import { site } from './site'
 // This runs as dist/server/index.mjs, so the client is beside it, in dist/client.
 const root = fileURLToPath(new URL('../client', import.meta.url))
 const port = Number(process.env.PORT ?? 8080)
-// infra/ sets INDEXED=false on staging.
+// infra/ sets INDEXED=false on development.
 const app = site(root, { indexed: process.env.INDEXED !== 'false' })
 
 const server = serve({ fetch: app.fetch, port }, () => console.log(\`listening on \${port}\`))
@@ -266,7 +266,7 @@ variable "region" {
 }
 
 variable "service" {
-  description = "The Cloud Run service's name, before -staging or -production."
+  description = "The Cloud Run service's name, before -development or -production."
   type        = string
 }
 
@@ -296,7 +296,7 @@ variable "members" {
 }
 `,
     'infra/main.tf': `locals {
-  environments = toset(["staging", "production"])
+  environments = toset(["development", "production"])
   private      = length(var.members) > 0
 }
 
@@ -383,9 +383,9 @@ resource "google_cloud_run_v2_service" "app" {
       # OpenTofu's (ignore_changes below). Settings for the app go in env blocks here.
       image = "us-docker.pkg.dev/cloudrun/container/hello"
 
-      # Staging is public too: keep search engines out of it.
+      # Development is public too: keep search engines out of it.
       dynamic "env" {
-        for_each = each.key == "staging" ? { INDEXED = "false" } : {}
+        for_each = each.key == "development" ? { INDEXED = "false" } : {}
         content {
           name  = env.key
           value = env.value
@@ -536,7 +536,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository"  = "assertion.repository"
     "attribute.environment" = "assertion.environment"
   }
-  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in ['staging', 'production']"
+  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in ['development', 'production']"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"

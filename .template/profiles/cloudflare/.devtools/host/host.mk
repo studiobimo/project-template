@@ -21,10 +21,9 @@ types-app:
 typecheck-app: types-app
 
 # The plugin writes the chosen environment's config into dist/ at build time, and wrangler
-# deploys what dist/ says. Building and deploying in one target is what keeps a staging
+# deploys what dist/ says. Building and deploying in one target is what keeps a development
 # build from going out under the production name. An app that fails stops the rest.
-deploy: ## Build every app for ENV (staging or production) and deploy it
-	$(require-deploy-env)
+deploy: deploy-branch ## Build every app for ENV (development or production) and deploy it
 	$(call each-app,deploy-app)
 
 deploy-app:

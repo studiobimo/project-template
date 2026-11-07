@@ -31,7 +31,7 @@ make -C .devtools check
 placeholders, swaps this README for a starter one, and deletes itself and `.template/`. Then it
 sets up the repository on GitHub with `gh`, which has to be signed in as an admin of it:
 
-- the description, from `DESC`, and any deployment environments named in `ENVS="staging production"`;
+- the description, from `DESC`, and any deployment environments named in `ENVS="development production"`;
 - the settings every studiobimo repository shares: squash-only merges, Actions and workflow
   permissions, secret scanning and Dependabot alerts, and the rulesets that protect `main` and
   release tags. Those are defined once in [studiobimo/.github](https://github.com/studiobimo/.github)
@@ -130,8 +130,8 @@ manages and what stays per project.
 
 - **`cloudflare`**, a hosting profile for a `vite-react-tanstack` app: one Worker serves the
   client and answers `/api/*` with Hono, with its tests, types, a deploy target that builds
-  for the environment it deploys to, and a workflow that runs it for `main` (staging) and
-  each release (production). Apart from that workflow it manages only `.devtools/host/`,
+  for the environment it deploys to, and a workflow that deploys `develop` to development and
+  each release to production. Apart from that workflow it manages only `.devtools/host/`,
   which the shared configs load when it exists, so adding it, or swapping it for another
   host later, leaves the project's own config files and `src/` alone:
 
@@ -143,9 +143,9 @@ manages and what stays per project.
 
 - **`gcp`**, the same for Google Cloud Run: one service, a Hono server on Node bundled into
   `dist/server`, serves the client and answers `/api/*`. OpenTofu in `infra/` sets up the
-  staging and production services, their accounts and Workload Identity Federation, and a
-  deploy workflow ships `main` to staging and each release to production, with no key
-  stored anywhere:
+  development and production services, their accounts and Workload Identity Federation, and
+  a deploy workflow ships `develop` to development and each release to production, with no
+  key stored anywhere:
 
   ```sh
   echo gcp >> .template-profiles
