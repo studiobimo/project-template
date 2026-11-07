@@ -16,4 +16,7 @@
     commit-message:
       prefix: chore
       include: scope
+    # target-branch is the project's own, so it goes on the line after this block's end
+    # marker, where a sync leaves it: `target-branch: main`, or `develop` in a project
+    # whose pull requests go to a develop branch.
   # <<< template:gcp
