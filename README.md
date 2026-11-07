@@ -131,7 +131,8 @@ manages and what stays per project.
 - **`cloudflare`**, a hosting profile for a `vite-react-tanstack` app: one Worker serves the
   client and answers `/api/*` with Hono, with its tests, types, a deploy target that builds
   for the environment it deploys to, and a workflow that deploys `develop` to development and
-  each release to production. Apart from that workflow it manages only `.devtools/host/`,
+  each release to production (`DEPLOY_ENVS := production` in `.devtools/Makefile` drops
+  development and `develop`). Apart from that workflow it manages only `.devtools/host/`,
   which the shared configs load when it exists, so adding it, or swapping it for another
   host later, leaves the project's own config files and `src/` alone:
 
