@@ -5,7 +5,8 @@
 The `cloudflare` profile keeps this section and `.devtools/host/` in step with the template.
 The shared Vite, Vitest, ESLint and make configs load their Cloudflare parts from there, so
 the project's own config files never name the host. `wrangler.jsonc`, `.dev.vars.example`
-and `worker/` are the project's. In a workspace they sit in `APP_DIR`, so run `wrangler` there.
+and `worker/` are the project's. In a workspace they sit in each app's directory (`APP_DIR`, or
+every entry of `APPS`), so run `wrangler` there.
 
 - **One Worker serves the app.** Static files come from `dist/client`, and any path that is
   not a file falls back to `index.html` for the router. Only `/api/*` runs the Hono app in

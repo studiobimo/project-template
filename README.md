@@ -123,6 +123,11 @@ manages and what stays per project.
     - packages/*
   ```
 
+  With several apps, list them in `APPS` (`APPS := apps/admin apps/site`). `build`, `typecheck`,
+  `budget`, `clean` and the host's `types` and `deploy` then run for each, `ci` and `deploy.yml`
+  with them, and `APP=apps/site` narrows one to a single app. A budget can be set per app
+  (`BUNDLE_TOTAL_KIB@apps/site := 200`).
+
 - **`cloudflare`**, a hosting profile for a `vite-react-tanstack` app: one Worker serves the
   client and answers `/api/*` with Hono, with its tests, types, a deploy target that builds
   for the environment it deploys to, and a workflow that deploys `develop` to development and
