@@ -37,10 +37,12 @@ TSC_PROJECTS := .
 # hooks, and many of those files are managed: formatting them here would be drift.
 PRETTIER_FILES := '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
 
-# Every hosting profile deploys to these two environments, and each ships from one branch, so a
-# laptop cannot put a feature branch on production. A hosting profile's deploy target takes
-# ENV=<one of them>; the recipe line stops it unless it was given one.
-DEPLOY_ENVS := development production
+# A hosting profile deploys to these environments, and each ships from one branch, so a laptop
+# cannot put a feature branch on production. Its deploy target takes ENV=<one of them>; the
+# recipe line stops it unless it was given one. A project that has no development environment
+# or develop branch sets DEPLOY_ENVS := production in Makefile; the first one listed is the
+# default of deploy.yml's manual run.
+DEPLOY_ENVS ?= development production
 DEPLOY_BRANCH_development := develop
 DEPLOY_BRANCH_production := main
 space := $(subst ,, )
@@ -51,6 +53,9 @@ require-deploy-env = @case "$(ENV)" in $(deploy-env-pattern)) ;; \
 MSG_ROUTES_STALE := $(GLYPH_FAIL) src/routeTree.gen.ts was stale and the build rewrote it: commit it
 MSG_DEPLOY_USAGE = $(GLYPH_FAIL) usage: $(DEVTOOLS) deploy ENV=$(deploy-env-pattern)
 
+deploy-envs:
+	@echo $(DEPLOY_ENVS)
+
 # A run from Actions has GITHUB_REF_NAME, the branch it started on: a checkout of a push is
 # detached, so git would name no branch there.
 deploy-branch:
@@ -60,7 +65,7 @@ deploy-branch:
 		echo "$(GLYPH_FAIL) $(ENV) ships from $(DEPLOY_BRANCH_$(ENV)), not $$branch" >&2; \
 		exit 1; }
 
-.PHONY: install dev build build-app preview test typecheck typecheck-app eslint fmt fmt-check budget budget-app audit playwright-install ci check lock clean clean-app deploy-branch
+.PHONY: deploy-envs install dev build build-app preview test typecheck typecheck-app eslint fmt fmt-check budget budget-app audit playwright-install ci check lock clean clean-app deploy-branch
 
 install: ## Install the packages pnpm-lock.yaml pins
 	$(PNPM) install --frozen-lockfile

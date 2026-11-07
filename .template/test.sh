@@ -216,7 +216,21 @@ cp -R "${work}/profile-cloudflare/.devtools/host" "${vite}/.devtools/"
 expect 0 "writes the hosting profile's files" gen host --no-install
 expect 0 "naming the Worker after the project" \
     grep -qF '"name": "profile-vite-react-tanstack"' "${vite}/wrangler.jsonc"
-rm -r "${vite}/.devtools/host"
+expect 0 "with both environments by default" \
+    grep -qF '"development": {}' "${vite}/wrangler.jsonc"
+rm -r "${vite}/wrangler.jsonc" "${vite}/worker" "${vite}/.dev.vars.example"
+printf 'DEPLOY_ENVS := production\n' >>"${vite}/.devtools/Makefile"
+expect 0 "writes only the environments DEPLOY_ENVS lists" gen host --no-install
+expect 1 "without development" grep -qF '"development"' "${vite}/wrangler.jsonc"
+expect 0 "keeping production" grep -qF '"production": {}' "${vite}/wrangler.jsonc"
+printf 'DEPLOY_ENVS := production\ninclude base.mk\ninclude vite.mk\n' >"${vite}/.devtools/production.mk"
+production() { make -s -C "${vite}/.devtools" -f production.mk "$@"; }
+expect 2 "and refuses to deploy to development" production deploy ENV=development
+listed_envs() { [[ "$(production deploy-envs)" == production ]]; }
+usage_of_deploy() { local out; out="$(production deploy ENV=development 2>&1)" || true; [[ "${out}" == *"ENV=production"$'\n'* ]]; }
+expect 0 "listing production for deploy.yml" listed_envs
+expect 0 "with a usage that names only production" usage_of_deploy
+rm -r "${vite}/.devtools/host" "${vite}/.devtools/production.mk"
 cp -R "${work}/profile-gcp/.devtools/host" "${vite}/.devtools/"
 expect 0 "writes another hosting profile's files" gen host --no-install
 expect 0 "naming the Cloud Run service after the project" \

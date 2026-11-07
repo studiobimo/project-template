@@ -14,18 +14,20 @@ every entry of `APPS`), so run `wrangler` there.
   the bindings in `wrangler.jsonc` simulated locally.
 - **Environments.** The top level of `wrangler.jsonc` is local development. Deploys go to
   `env.development` or `env.production`, as `<name>-development` and `<name>-production`.
-  Neither inherits bindings or vars from the top level, so restate them in each.
+  Neither inherits bindings or vars from the top level, so restate them in each. A project
+  with no development environment or `develop` branch sets `DEPLOY_ENVS := production` in
+  `.devtools/Makefile`, and keeps only `env.production`.
 - **Deploy with `make -C .devtools deploy ENV=<env>`.** The environment is fixed when the
   app is built, not when it is deployed. The target builds and deploys in one step;
   `wrangler deploy` after a plain build ships local development's bindings. It refuses to
   run from any branch but the one its environment ships from: `develop` for development,
   `main` for production.
 - **`deploy.yml` runs the same target:** on a push to `develop` to development, and to
-  production when `release.yml` calls it for a release. It needs a repository variable,
-  `CLOUDFLARE_ACCOUNT_ID`, and in each of the `development` and `production` GitHub
-  environments a `CLOUDFLARE_API_TOKEN` secret, from the "Edit Cloudflare Workers"
-  template and limited to the account. Don't also connect Workers Builds, or every push
-  deploys twice.
+  production when `release.yml` calls it for a release. A run from Actions defaults to the
+  first environment in `DEPLOY_ENVS`. It needs a repository variable,
+  `CLOUDFLARE_ACCOUNT_ID`, and in each of its GitHub environments a `CLOUDFLARE_API_TOKEN`
+  secret, from the "Edit Cloudflare Workers" template and limited to the account. Don't also
+  connect Workers Builds, or every push deploys twice.
 - **Secrets** are never committed. List their names in `.dev.vars.example`. Put local
   values in `.dev.vars`, and deployed ones with
   `pnpm exec wrangler secret put <NAME> --env <env>`.
