@@ -53,7 +53,7 @@ DEPLOY_ENVS ?= development production
 DEPLOY_BRANCH_development := develop
 DEPLOY_BRANCH_production := main
 space := $(subst ,, )
-deploy-env-pattern = $(subst $(space),|,$(DEPLOY_ENVS))
+deploy-env-pattern = $(subst $(space),|,$(strip $(DEPLOY_ENVS)))
 require-deploy-env = @case "$(ENV)" in $(deploy-env-pattern)) ;; \
 	*) echo "$(MSG_DEPLOY_USAGE)" >&2; exit 1 ;; esac
 

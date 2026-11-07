@@ -40,6 +40,13 @@ const appDir =
 const app = join(root, appDir)
 const workspace = appDir !== '.'
 
+// vite.mk's DEPLOY_ENVS, from the line in Makefile that sets it, without a trailing comment.
+const deployEnvs = read('.devtools/Makefile')
+  .match(/^DEPLOY_ENVS\s*[:?]?=([^#\n]*)/m)?.[1]
+  .trim()
+  .split(/\s+/)
+  .filter(Boolean) ?? ['development', 'production']
+
 /**
  * Whether the block list under pnpm-workspace.yaml's packages: key takes in APP_DIR. An app it
  * leaves out still installs, but on its own: with a lockfile of its own, and outside `make install`.
@@ -120,8 +127,8 @@ function readmeDescription(readme) {
 }
 
 /**
- * The project's name, slug and Node major, as init and mise.toml left them, with `appDir` and
- * `repo`, the path from the app back to the repository's root.
+ * The project's name, slug and Node major, as init and mise.toml left them, with `appDir`,
+ * `deployEnvs` and `repo`, the path from the app back to the repository's root.
  */
 function project() {
   const readme = read('README.md')
@@ -129,7 +136,15 @@ function project() {
   const name = readme.match(/^# (.+)$/m)?.[1].trim() ?? pascal(slug)
   const description = readmeDescription(readme) ?? name
   const nodeMajor = read('mise.toml').match(/^node = "(\d+)/m)?.[1] ?? '24'
-  return { slug, name, description, nodeMajor, appDir, repo: relative(app, root) || '.' }
+  return {
+    slug,
+    name,
+    description,
+    nodeMajor,
+    appDir,
+    deployEnvs,
+    repo: relative(app, root) || '.'
+  }
 }
 
 /**
