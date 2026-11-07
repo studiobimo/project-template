@@ -372,15 +372,15 @@ setup=(.devtools/scripts/github-setup.sh --from "${work}/settings")
 called() { grep -qxF -- "$1" "${GH_LOG}"; }
 
 : >"${GH_LOG}"
-expect 1 "--check reports what is missing" env DESC="A widget." ENVS=staging "${setup[@]}" --check
+expect 1 "--check reports what is missing" env DESC="A widget." ENVS=development "${setup[@]}" --check
 expect 0 "and asks the shared script only to compare" called "shared ORG=acme --check widget"
 expect 1 "and changes nothing" grep -qv '^shared ' "${GH_LOG}"
 
 : >"${GH_LOG}"
-expect 0 "applies the setup" env DESC="A widget." ENVS=staging "${setup[@]}"
+expect 0 "applies the setup" env DESC="A widget." ENVS=development "${setup[@]}"
 expect 0 "runs the shared settings for this repository" called "shared ORG=acme widget"
 expect 0 "sets the description" called "repo edit acme/widget --description A widget."
-expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/staging"
+expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/development"
 
 : >"${GH_LOG}"
 expect 0 "leaves the description alone unless asked" "${setup[@]}"

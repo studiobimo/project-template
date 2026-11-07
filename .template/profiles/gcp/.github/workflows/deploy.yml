@@ -2,15 +2,17 @@ name: Deploy
 
 # Deploys to Cloud Run with `make -C .devtools deploy`, the target a developer runs:
 #
-#   push to main            -> staging
+#   push to develop         -> development
 #   a release               -> production, from release.yml (below)
-#   run it from Actions     -> either
+#   run it from Actions     -> either, from the branch that environment ships from
 #
 # It signs in to GCP with Workload Identity Federation, so no key is stored anywhere. It
 # reads two repository variables, GCP_WORKLOAD_IDENTITY_PROVIDER and GCP_SERVICE_ACCOUNT,
 # which `make -C .devtools infra-github` sets; until they are set it skips. Each run is in a
 # GitHub environment named after its target, so that environment's rules (reviewers,
-# branches) gate it. Managed by studiobimo/project-template (profile gcp).
+# branches) gate it. The deploy target refuses a run from any other branch than the one its
+# environment ships from: develop for development, main for production.
+# Managed by studiobimo/project-template (profile gcp).
 #
 # release-please tags with GITHUB_TOKEN, which starts no other workflow, so production is
 # deployed by a job in release.yml that calls this one:
@@ -27,18 +29,18 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
   workflow_dispatch:
     inputs:
       environment:
         description: Where to deploy
         type: choice
-        options: [staging, production]
-        default: staging
+        options: [development, production]
+        default: development
   workflow_call:
     inputs:
       environment:
-        description: staging or production
+        description: development or production
         type: string
         required: true
 
@@ -49,13 +51,13 @@ jobs:
     if: vars.GCP_WORKLOAD_IDENTITY_PROVIDER != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'development' }}
     permissions:
       contents: read
       id-token: write
     # One deploy per environment at a time, each run to the end: a newer one queues.
     concurrency:
-      group: deploy-${{ inputs.environment || 'staging' }}
+      group: deploy-${{ inputs.environment || 'development' }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -84,5 +86,5 @@ jobs:
 
       - name: make deploy
         env:
-          DEPLOY_ENV: ${{ inputs.environment || 'staging' }}
+          DEPLOY_ENV: ${{ inputs.environment || 'development' }}
         run: make -C .devtools deploy ENV="${DEPLOY_ENV}"

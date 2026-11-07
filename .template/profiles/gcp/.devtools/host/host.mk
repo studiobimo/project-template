@@ -39,8 +39,7 @@ node-image-check: ## Fail when the Dockerfile's Node is not the one mise.toml pi
 # The image is built by Cloud Build from the Dockerfile and dist/ alone (.gcloudignore), so
 # the build here is what ships. The client is the same build in every environment: what
 # differs per environment belongs on the service, in infra/.
-deploy: ## Build, then deploy it to Cloud Run as <service>-ENV (ENV is staging or production)
-	$(require-deploy-env)
+deploy: deploy-branch ## Build, then deploy to Cloud Run as <service>-ENV (development or production)
 	@command -v gcloud >/dev/null || { echo "$(MSG_NO_GCLOUD)" >&2; exit 1; }
 	$(MAKE) --no-print-directory build
 	cd $(ROOT) && project="$(call setting,project)" && gcloud run deploy "$(call setting,service)-$(ENV)" \

@@ -6,7 +6,7 @@
 # It fills in the placeholders, swaps the template's README for the starter one,
 # resets the release state, and then removes everything that only the template
 # needs -- .template/, the `template:init` regions, and this script. Last, it sets
-# up the repository on GitHub (github-setup.sh); ENVS="staging production" also
+# up the repository on GitHub (github-setup.sh); ENVS="development production" also
 # creates those deployment environments.
 set -euo pipefail
 

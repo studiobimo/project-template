@@ -18,9 +18,8 @@ types: ## Generate the Worker's Env type, worker/worker-configuration.d.ts, from
 typecheck: types
 
 # The plugin writes the chosen environment's config into dist/ at build time, and wrangler
-# deploys what dist/ says. Building and deploying in one target is what keeps a staging
+# deploys what dist/ says. Building and deploying in one target is what keeps a development
 # build from going out under the production name.
-deploy: ## Build for ENV (staging or production) and deploy it
-	$(require-deploy-env)
+deploy: deploy-branch ## Build for ENV (development or production) and deploy it
 	CLOUDFLARE_ENV=$(ENV) $(MAKE) --no-print-directory build
 	$(WRANGLER) deploy

@@ -2,15 +2,17 @@ name: Deploy
 
 # Deploys the Worker with `make -C .devtools deploy`, the target a developer runs:
 #
-#   push to main            -> staging
+#   push to develop         -> development
 #   a release               -> production, from release.yml (below)
-#   run it from Actions     -> either
+#   run it from Actions     -> either, from the branch that environment ships from
 #
 # It reads a repository variable, CLOUDFLARE_ACCOUNT_ID, and a secret, CLOUDFLARE_API_TOKEN,
 # kept in each GitHub environment rather than in the repository: a token from the "Edit
 # Cloudflare Workers" template, limited to the account. Until the variable is set it skips.
 # Each run is in a GitHub environment named after its target, so that environment's rules
-# (reviewers, branches) gate it. Managed by studiobimo/project-template (profile cloudflare).
+# (reviewers, branches) gate it. The deploy target refuses a run from any other branch than
+# the one its environment ships from: develop for development, main for production.
+# Managed by studiobimo/project-template (profile cloudflare).
 #
 # release-please tags with GITHUB_TOKEN, which starts no other workflow, so production is
 # deployed by a job in release.yml that calls this one. The token is the environment's own
@@ -27,18 +29,18 @@ name: Deploy
 
 on:
   push:
-    branches: [main]
+    branches: [develop]
   workflow_dispatch:
     inputs:
       environment:
         description: Where to deploy
         type: choice
-        options: [staging, production]
-        default: staging
+        options: [development, production]
+        default: development
   workflow_call:
     inputs:
       environment:
-        description: staging or production
+        description: development or production
         type: string
         required: true
 
@@ -49,12 +51,12 @@ jobs:
     if: vars.CLOUDFLARE_ACCOUNT_ID != ''
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    environment: ${{ inputs.environment || 'staging' }}
+    environment: ${{ inputs.environment || 'development' }}
     permissions:
       contents: read
     # One deploy per environment at a time, each run to the end: a newer one queues.
     concurrency:
-      group: deploy-${{ inputs.environment || 'staging' }}
+      group: deploy-${{ inputs.environment || 'development' }}
       cancel-in-progress: false
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -72,7 +74,7 @@ jobs:
 
       - name: make deploy
         env:
-          DEPLOY_ENV: ${{ inputs.environment || 'staging' }}
+          DEPLOY_ENV: ${{ inputs.environment || 'development' }}
           CLOUDFLARE_ACCOUNT_ID: ${{ vars.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           WRANGLER_SEND_METRICS: 'false'
