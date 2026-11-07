@@ -109,16 +109,23 @@ function run(command, args) {
   if (error || status !== 0) die(say.failed(command, args))
 }
 
+/** The README's first line of prose under its heading. Badges and images are not prose. */
+function readmeDescription(readme) {
+  const [, body = ''] = readme.match(/^# .+\n([\s\S]*)/m) ?? []
+  const lines = body.split('\n').map((line) => line.trim())
+  const first = lines.find((line) => line && !/^\[?!\[/.test(line))
+  return first?.startsWith('#') ? undefined : first
+}
+
 /**
  * The project's name, slug and Node major, as init and mise.toml left them, with `appDir` and
  * `repo`, the path from the app back to the repository's root.
  */
 function project() {
-  // The starter README init writes is a heading and the one-line description.
   const readme = read('README.md')
   const slug = kebab(basename(root))
   const name = readme.match(/^# (.+)$/m)?.[1].trim() ?? pascal(slug)
-  const description = readme.match(/^# .+\n+([^#\n].+)$/m)?.[1].trim() ?? name
+  const description = readmeDescription(readme) ?? name
   const nodeMajor = read('mise.toml').match(/^node = "(\d+)/m)?.[1] ?? '24'
   return { slug, name, description, nodeMajor, appDir, repo: relative(app, root) || '.' }
 }
@@ -757,7 +764,9 @@ pnpm-lock.yaml
         '@testing-library/dom',
         '@testing-library/jest-dom',
         // The shadcn/ui CLI, so `pnpm exec shadcn` runs the version pnpm-lock.yaml pins.
-        'shadcn'
+        'shadcn',
+        // src/index.css imports it, and the CLI looks for it in the app's own package.
+        'tailwindcss'
       ],
       [
         'vite',
