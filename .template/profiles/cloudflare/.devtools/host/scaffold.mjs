@@ -2,26 +2,18 @@
 //
 // The project's own Cloudflare files and packages, for `gen.mjs host` (or `gen.mjs app`) to
 // write and install. Once written they are the project's: sync never compares them.
-import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
 // The newest date the workerd that pnpm installs is sure to know: pnpm takes nothing less
 // than a week old, and a release supports dates up to its own.
 const compatibilityDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
-// The environments the project deploys to: the line in its Makefile that sets DEPLOY_ENVS, as
-// vite.mk reads it, or both.
-const environments = readFileSync('.devtools/Makefile', 'utf8')
-  .match(/^DEPLOY_ENVS\s*[:?]?=\s*(.+)$/m)?.[1]
-  .trim()
-  .split(/\s+/) ?? ['development', 'production']
-
-export default ({ slug, repo }) => ({
+export default ({ slug, repo, deployEnvs }) => ({
   dependencies: ['hono'],
   devDependencies: ['@cloudflare/vite-plugin', 'wrangler'],
   next: [
     'pnpm exec wrangler login                 # once, to deploy from this machine',
-    `make -C .devtools deploy ENV=${environments[0]} # <name>-${environments[0]}, from wrangler.jsonc`
+    `make -C .devtools deploy ENV=${deployEnvs[0]} # <name>-${deployEnvs[0]}, from wrangler.jsonc`
   ],
   files: {
     'wrangler.jsonc': `{
@@ -42,7 +34,7 @@ export default ({ slug, repo }) => ({
   // <name>-<environment>, chosen at build time: make -C .devtools deploy ENV=<environment>.
   // Neither inherits bindings or vars from the top level, so each restates them.
   "env": {
-${environments.map((name) => `    "${name}": {}`).join(',\n')}
+${deployEnvs.map((name) => `    "${name}": {}`).join(',\n')}
   }
 }
 `,

@@ -23,6 +23,19 @@ remotes:
 # <<< template:base
 
 # >>> template:init
+# The profiles' workflows, which the shared jobs miss: they look under .github/ only.
+pre-commit:
+  jobs:
+    - name: profile-actionlint
+      glob: '.template/profiles/*/.github/workflows/*.{yml,yaml}'
+      run: mise exec -- actionlint {staged_files}
+    - name: profile-zizmor
+      glob: '.template/profiles/*/.github/workflows/*.{yml,yaml}'
+      run: mise exec -- zizmor --no-progress {staged_files}
+    - name: profile-github-workflows
+      glob: '.template/profiles/*/.github/workflows/*.{yml,yaml}'
+      run: mise exec -- check-jsonschema --builtin-schema vendor.github-workflows {staged_files}
+
 # The starter README's links only resolve once init moves it to the root.
 pre-push:
   jobs:
