@@ -92,6 +92,20 @@ usage_of() {
         { exit }' "$1"
 }
 
+# parse_check_from_ref "$@": reads --check, --from <dir> and --ref <ref> into mode, from
+# and ref, and answers --help with the calling script's header.
+parse_check_from_ref() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --check) mode=check; shift ;;
+            --from) need_value "$@"; from="$2"; shift 2 ;;
+            --ref) need_value "$@"; ref="$2"; shift 2 ;;
+            -h | --help) usage_of "${BASH_SOURCE[1]}"; exit "${EXIT_OK}" ;;
+            *) die "${MSG_UNKNOWN_ARG}" "$1" ;;
+        esac
+    done
+}
+
 # --- Shared messages ----------------------------------------------------------------------
 
 MSG_NOT_GIT_REPO='not inside a git repository'

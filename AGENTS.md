@@ -64,6 +64,15 @@ violation is caught before it is reviewed.
   committed together.
 - **Workflows:** `permissions: {}` at the top, the minimum per job, `persist-credentials: false`
   on every checkout, secrets passed explicitly and never with `secrets: inherit`.
+- **No comments** in code files. Tool directives (`eslint-disable`, `@ts-expect-error`) are the
+  only exception. Code that seems to need one gets a well-named helper or clearer names instead.
+  `uncomment --check` fails the pre-commit hook and CI on any other comment.
+- **One source of truth.** Domain logic, validation rules, schemas and configuration values live
+  in exactly one place, in application code, tests, build scripts and workflows alike. Replace
+  duplication with shared functions or modules: fewer lines through consolidation, never through
+  clever one-liners. `make -C .devtools check` runs jscpd, and knip where there is a
+  `package.json`.
+- **Constants by domain:** grouped in objects, `DOMAIN.group.name`, not `DOMAIN_GROUP_NAME`.
 - **Say what you tested.** State what you ran and what it showed. If something could not be
   tested, say so plainly rather than implying it was.
 

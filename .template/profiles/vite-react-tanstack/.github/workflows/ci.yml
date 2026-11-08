@@ -1,8 +1,8 @@
 name: CI
 
 # Installs the tools mise.toml pins and the packages pnpm-lock.yaml pins, then runs
-# `make -C .devtools ci`: build, route tree, types, ESLint, Prettier, tests, bundle budget
-# and the audit. It is the target a developer runs, at the same versions, so local and CI
+# `make -C .devtools ci`: build, route tree, types, ESLint, knip, jscpd, Prettier, tests,
+# bundle budget and the audit. It is the target a developer runs, at the same versions, so local and CI
 # results match. Managed by studiobimo/project-template (profile vite-react-tanstack).
 #
 # Nothing here reads a secret, so it is safe on pull requests from forks. Deploying is a

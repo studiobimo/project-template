@@ -96,6 +96,46 @@ url = "https://github.com/editorconfig-checker/editorconfig-checker/releases/dow
 url_api = "https://api.github.com/repos/editorconfig-checker/editorconfig-checker/releases/assets/574675794"
 provenance = "github-attestations"
 
+[[tools."github:Goldziher/uncomment"]]
+version = "3.10.4"
+backend = "github:Goldziher/uncomment"
+specifiers = ["3.10.4"]
+
+[tools."github:Goldziher/uncomment"."platforms.linux-arm64"]
+checksum = "sha256:0b05019a9a1eab1088c78c31e6133059d3c2bab6c0ed60ce7034047ba8e459fb"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698489043"
+
+[tools."github:Goldziher/uncomment"."platforms.linux-arm64-musl"]
+checksum = "sha256:0b05019a9a1eab1088c78c31e6133059d3c2bab6c0ed60ce7034047ba8e459fb"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-aarch64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698489043"
+
+[tools."github:Goldziher/uncomment"."platforms.linux-x64"]
+checksum = "sha256:206d97279c55b9c0dbc33f5a0bf5a8dfc00a4d828ec4c7e3988e4c7d509cf27d"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698489091"
+
+[tools."github:Goldziher/uncomment"."platforms.linux-x64-musl"]
+checksum = "sha256:206d97279c55b9c0dbc33f5a0bf5a8dfc00a4d828ec4c7e3988e4c7d509cf27d"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-x86_64-unknown-linux-gnu.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698489091"
+
+[tools."github:Goldziher/uncomment"."platforms.macos-arm64"]
+checksum = "sha256:b1a530dab7ab28ce359948d7770534d56ac3b0bc39319bc9f9eb4f4931793a75"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-aarch64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698490883"
+
+[tools."github:Goldziher/uncomment"."platforms.macos-x64"]
+checksum = "sha256:651dccb592a0a739c37ef03fa8ab3cf792167a2f4a323b969d6bcc1264df2d05"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-x86_64-apple-darwin.tar.gz"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698492985"
+
+[tools."github:Goldziher/uncomment"."platforms.windows-x64"]
+checksum = "sha256:912f705fdd3d57848ec3fd06f0a2b986d170cb8c2488c77167eaf9b32b8f48de"
+url = "https://github.com/Goldziher/uncomment/releases/download/v3.10.4/uncomment-x86_64-pc-windows-gnu.zip"
+url_api = "https://api.github.com/repos/Goldziher/uncomment/releases/assets/698486163"
+
 [[tools.gitleaks]]
 version = "8.30.1"
 backend = "aqua:gitleaks/gitleaks"
@@ -267,6 +307,12 @@ version = "21.2.3"
 aube = { path = ".mise/locks/npm-commitlint-config-conventional/21.2.3", digest = "sha256:4e561623f49495adaafcabb36791769143e8157eb823983609aa3c75f8ea79d1" }
 backend = "npm:@commitlint/config-conventional"
 specifiers = ["21.2.3"]
+
+[[tools."npm:jscpd"]]
+version = "5.4.2"
+aube = { path = ".mise/locks/npm-jscpd/5.4.2", digest = "sha256:de55a23e436e347d070bdc7c62d0b2adf1465def4f7a410ce0786f37af67e094" }
+backend = "npm:jscpd"
+specifiers = ["5.4.2"]
 
 [[tools."npm:markdownlint-cli2"]]
 version = "0.23.3"

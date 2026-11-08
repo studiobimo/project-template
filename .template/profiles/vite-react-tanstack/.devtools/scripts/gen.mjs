@@ -381,6 +381,19 @@ describe('use${P}', () => {
       format: "prettier --write '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'",
       gen: 'node .devtools/scripts/gen.mjs'
     }
+    const knipApp = {
+      entry: ['src/lib/utils.ts'],
+      ignore: ['src/components/ui/**'],
+      ignoreDependencies: ['shadcn', 'zod']
+    }
+    const knipConfig = (dir) => {
+      const shared = { $schema: 'https://unpkg.com/knip@6/schema.json' }
+      const config =
+        dir === '.'
+          ? { ...shared, ...knipApp, ignore: ['.devtools/**', ...knipApp.ignore] }
+          : { ...shared, ignore: ['.devtools/**'], workspaces: { [dir]: knipApp } }
+      return `${JSON.stringify(config, null, 2)}\n`
+    }
     const eslintConfig = (path, rules) => `import { defineConfig } from 'eslint/config'
 
 import { ${rules} } from '${path}/.devtools/vite/eslint.js'
@@ -470,8 +483,7 @@ export default defineConfig({
   </body>
 </html>
 `,
-        'src/config/site.ts': `// The one source of truth for the site's metadata: index.html takes it at build time,
-export const site = {
+        'src/config/site.ts': `export const site = {
   name: '${quote(name)}',
   title: '${quote(name)}',
   description: '${quote(description)}',
@@ -629,8 +641,6 @@ void i18n
 const setLang = (language: string) => (document.documentElement.lang = language)
 setLang(i18n.resolvedLanguage ?? defaultLanguage)
 i18n.on('languageChanged', setLang)
-
-export default i18n
 `,
         'src/i18n/locales.test.ts': `import { describe, expect, it } from 'vitest'
 
@@ -678,6 +688,7 @@ ${join(appDir, 'src/routeTree.gen.ts')}
 ${join(appDir, 'src/components/ui/')}
 pnpm-lock.yaml
 `,
+        'knip.json': knipConfig(appDir),
         '.claude/launch.json': `{
   "version": "0.0.1",
   "configurations": [
@@ -741,6 +752,7 @@ pnpm-lock.yaml
         '@tanstack/eslint-plugin-router',
         'eslint-plugin-i18next',
         'prettier',
+        'knip',
         ...host.devDependencies
       ]
     )
