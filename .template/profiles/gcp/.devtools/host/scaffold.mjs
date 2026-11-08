@@ -9,18 +9,7 @@ const uploadOnly = (path) =>
     })
     .join('\n')
 
-export default ({ slug, appDir, repo, deployEnvs }) => ({
-  dependencies: ['hono', '@hono/node-server'],
-  devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
-  next: [
-    'edit infra/project.auto.tfvars.json   # the GCP project, region, repository, billing account, budget',
-    'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
-    'make -C .devtools infra-apply         # the services, their accounts, Workload Identity',
-    'make -C .devtools infra-github        # the repository variables deploy.yml signs in with',
-    `make -C .devtools deploy ENV=${deployEnvs[0]} # <service>-${deployEnvs[0]}, from this machine`
-  ],
-  files: {
-    'server/tsconfig.json': `{
+const serverTsconfig = (repo) => `{
   "extends": "${join('..', repo, '.devtools/vite/tsconfig.base.json')}",
   "compilerOptions": {
     "tsBuildInfoFile": "../node_modules/.tmp/tsconfig.server.tsbuildinfo",
@@ -30,8 +19,9 @@ export default ({ slug, appDir, repo, deployEnvs }) => ({
   },
   "include": ["."]
 }
-`,
-    'server/app.ts': `import { Hono } from 'hono'
+`
+
+const serverApp = `import { Hono } from 'hono'
 
 const app = new Hono().basePath('/api')
 
@@ -44,8 +34,9 @@ app.onError((error, c) => {
 })
 
 export default app
-`,
-    'server/app.test.ts': `import { describe, expect, it } from 'vitest'
+`
+
+const serverAppTest = `import { describe, expect, it } from 'vitest'
 
 import app from './app'
 
@@ -62,8 +53,9 @@ describe('api', () => {
     expect(await response.json()).toEqual({ error: 'Not found' })
   })
 })
-`,
-    'server/site.ts': `import { serveStatic } from '@hono/node-server/serve-static'
+`
+
+const serverSite = `import { serveStatic } from '@hono/node-server/serve-static'
 import { Hono } from 'hono'
 import { compress } from 'hono/compress'
 import { createMiddleware } from 'hono/factory'
@@ -95,8 +87,9 @@ export function site(root: string, options: { indexed?: boolean } = {}) {
     .get('/assets/*', (c) => c.text('Not found', 404))
     .get('*', serveStatic({ root, path: 'index.html' }))
 }
-`,
-    'server/site.test.ts': `import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+`
+
+const serverSiteTest = `import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
@@ -150,8 +143,9 @@ describe('site', () => {
     expect((await hidden.request('/api/health')).headers.get('x-robots-tag')).toBe('noindex')
   })
 })
-`,
-    'server/index.ts': `import { fileURLToPath } from 'node:url'
+`
+
+const serverIndex = `import { fileURLToPath } from 'node:url'
 
 import { serve } from '@hono/node-server'
 
@@ -165,9 +159,10 @@ const server = serve({ fetch: app.fetch, port }, () => console.log(\`listening o
 
 process.on('SIGTERM', () => server.close(() => process.exit(0)))
 `
-  },
-  repoFiles: {
-    Dockerfile: `# Cloud Build builds this from what \`make -C .devtools build\` left in dist/: .gcloudignore
+
+const dockerfile = (
+  appDir
+) => `# Cloud Build builds this from what \`make -C .devtools build\` left in dist/: .gcloudignore
 # sends it nothing else. The server is one bundled file, so the image is Node and dist/,
 # with no shell, no package manager and no node_modules.
 #
@@ -183,15 +178,19 @@ COPY ${join(appDir, 'dist')} ./dist
 ENV NODE_ENV=production
 ENTRYPOINT ["/usr/local/bin/node"]
 CMD ["--enable-source-maps", "dist/server/index.mjs"]
-`,
-    '.gcloudignore': `# What \`gcloud run deploy --source\` uploads to Cloud Build: the Dockerfile and dist/, which
+`
+
+const gcloudignore = (
+  appDir
+) => `# What \`gcloud run deploy --source\` uploads to Cloud Build: the Dockerfile and dist/, which
 # \`make -C .devtools build\` writes first. Nothing else, so no source, no .env and no
 # credentials file goes with it.
 /*
 !/Dockerfile
 ${uploadOnly(join(appDir, 'dist'))}
-`,
-    'infra/project.auto.tfvars.json': `{
+`
+
+const tfvars = (slug) => `{
   "project": "${slug}",
   "region": "us-central1",
   "service": "${slug}",
@@ -200,8 +199,9 @@ ${uploadOnly(join(appDir, 'dist'))}
   "monthly_budget": 25,
   "members": []
 }
-`,
-    'infra/versions.tf': `terraform {
+`
+
+const tfVersions = `terraform {
   required_version = ">= 1.10"
 
   required_providers {
@@ -228,8 +228,9 @@ provider "google" {
   billing_project       = var.project
   user_project_override = true
 }
-`,
-    'infra/variables.tf': `# Values in project.auto.tfvars.json, which make reads too.
+`
+
+const tfVariables = `# Values in project.auto.tfvars.json, which make reads too.
 
 variable "project" {
   description = "The GCP project ID. One project per app: the account names below are fixed."
@@ -270,9 +271,13 @@ variable "members" {
   type        = list(string)
   default     = []
 }
-`,
-    'infra/main.tf': `locals {
-  environments = toset([${deployEnvs.map((name) => `"${name}"`).join(', ')}])
+`
+
+const environmentList = (deployEnvs, quote) =>
+  deployEnvs.map((name) => `${quote}${name}${quote}`).join(', ')
+
+const tfMain = (deployEnvs) => `locals {
+  environments = toset([${environmentList(deployEnvs, '"')}])
   private      = length(var.members) > 0
 }
 
@@ -318,8 +323,9 @@ resource "google_artifact_registry_repository" "source" {
 
   depends_on = [google_project_service.api]
 }
+`
 
-# Each environment's service runs as its own account, with no roles: grant one what the
+const tfService = `# Each environment's service runs as its own account, with no roles: grant one what the
 # service uses, such as a secret or a bucket, and nothing more.
 resource "google_service_account" "runtime" {
   for_each     = local.environments
@@ -423,8 +429,9 @@ resource "google_iap_web_cloud_run_service_iam_member" "members" {
   role                   = "roles/iap.httpsResourceAccessor"
   member                 = each.value.member
 }
+`
 
-# Mails the billing account's admins as the month's cost reaches half, nine tenths and all
+const tfBudget = `# Mails the billing account's admins as the month's cost reaches half, nine tenths and all
 # of monthly_budget, and when it is forecast to pass it. It stops nothing.
 resource "google_billing_budget" "project" {
   billing_account = var.billing_account
@@ -456,8 +463,11 @@ resource "google_billing_budget" "project" {
 
   depends_on = [google_project_service.api]
 }
+`
 
-# Builds the images, instead of the project's default compute account.
+const tfDeploy = (
+  deployEnvs
+) => `# Builds the images, instead of the project's default compute account.
 resource "google_service_account" "builder" {
   account_id   = "builder"
   display_name = "Cloud Build: images for Cloud Run"
@@ -512,7 +522,7 @@ resource "google_iam_workload_identity_pool_provider" "github" {
     "attribute.repository"  = "assertion.repository"
     "attribute.environment" = "assertion.environment"
   }
-  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in [${deployEnvs.map((name) => `'${name}'`).join(', ')}]"
+  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in [${environmentList(deployEnvs, "'")}]"
 
   oidc {
     issuer_uri = "https://token.actions.githubusercontent.com"
@@ -524,8 +534,9 @@ resource "google_service_account_iam_member" "github_deploys" {
   role               = "roles/iam.workloadIdentityUser"
   member             = "principalSet://iam.googleapis.com/\${google_iam_workload_identity_pool.github.name}/attribute.repository/\${var.github_repository}"
 }
-`,
-    'infra/outputs.tf': `output "urls" {
+`
+
+const tfOutputs = `output "urls" {
   description = "Each environment's URL."
   value       = { for env, service in google_cloud_run_v2_service.app : env => service.uri }
 }
@@ -539,5 +550,35 @@ output "deployer" {
   value = google_service_account.deployer.email
 }
 `
+
+export default ({ slug, appDir, repo, deployEnvs }) => ({
+  dependencies: ['hono', '@hono/node-server'],
+  devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
+  next: [
+    'edit infra/project.auto.tfvars.json   # the GCP project, region, repository, billing account, budget',
+    'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
+    'make -C .devtools infra-apply         # the services, their accounts, Workload Identity',
+    'make -C .devtools infra-github        # the repository variables deploy.yml signs in with',
+    `make -C .devtools deploy ENV=${deployEnvs[0]} # <service>-${deployEnvs[0]}, from this machine`
+  ],
+  files: {
+    'server/tsconfig.json': serverTsconfig(repo),
+    'server/app.ts': serverApp,
+    'server/app.test.ts': serverAppTest,
+    'server/site.ts': serverSite,
+    'server/site.test.ts': serverSiteTest,
+    'server/index.ts': serverIndex
+  },
+  repoFiles: {
+    Dockerfile: dockerfile(appDir),
+    '.gcloudignore': gcloudignore(appDir),
+    'infra/project.auto.tfvars.json': tfvars(slug),
+    'infra/versions.tf': tfVersions,
+    'infra/variables.tf': tfVariables,
+    'infra/main.tf': tfMain(deployEnvs),
+    'infra/service.tf': tfService,
+    'infra/budget.tf': tfBudget,
+    'infra/deploy.tf': tfDeploy(deployEnvs),
+    'infra/outputs.tf': tfOutputs
   }
 })

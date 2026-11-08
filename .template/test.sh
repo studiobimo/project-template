@@ -241,7 +241,7 @@ expect 0 "with an image on the Node mise.toml pins" \
 expect 0 "with a service for each environment DEPLOY_ENVS lists" \
     grep -qF 'environments = toset(["production"])' "${vite}/infra/main.tf"
 expect 0 "and only those let in to deploy" \
-    grep -qF "assertion.environment in ['production']" "${vite}/infra/main.tf"
+    grep -qF "assertion.environment in ['production']" "${vite}/infra/deploy.tf"
 
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }

@@ -11,8 +11,7 @@ const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
 const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
 
-const appDir =
-  read('.devtools/Makefile').match(/^(?:APP_DIR|APPS)\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
+const appDir = read('.devtools/Makefile').match(/^(?:APP_DIR|APPS)\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
 const app = join(root, appDir)
 const workspace = appDir !== '.'
 
@@ -154,6 +153,41 @@ function routeOf(path) {
   return { file: `src/routes/${file}.tsx`, id }
 }
 
+const featureCatalogs = (name, k) => {
+  const title = words(name).join(' ')
+  const catalog = { title: title[0].toUpperCase() + title.slice(1) }
+  return Object.fromEntries(
+    languages().map((language) => [
+      `src/locales/${language}/${k}.json`,
+      `${JSON.stringify(catalog, null, 2)}\n`
+    ])
+  )
+}
+
+function featurePageTest(k, P, c) {
+  return `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+
+import { ${P}Page } from './${k}-page'
+import { ${c}QueryOptions } from './queries'
+
+describe('${P}Page', () => {
+  it('lists what the query returned under its title', () => {
+    const queryClient = new QueryClient()
+    queryClient.setQueryData(${c}QueryOptions().queryKey, [{ id: 'first' }])
+    render(
+      <QueryClientProvider client={queryClient}>
+        <${P}Page />
+      </QueryClientProvider>
+    )
+    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
+    expect(screen.getByText('first')).toBeInTheDocument()
+  })
+})
+`
+}
+
 const generators = {
   route([path], { feature }) {
     if (!path) die(say.usageRoute)
@@ -199,29 +233,19 @@ export const Route = createFileRoute('${id}')({
     const P = pascal(name)
     const c = camel(name)
     const dir = `src/features/${k}`
-    const title = words(name).join(' ')
-    const catalog = { title: title[0].toUpperCase() + title.slice(1) }
-    const catalogs = Object.fromEntries(
-      languages().map((language) => [
-        `src/locales/${language}/${k}.json`,
-        `${JSON.stringify(catalog, null, 2)}\n`
-      ])
-    )
     emit({
-      ...catalogs,
+      ...featureCatalogs(name, k),
       [`${dir}/schema.ts`]: `import { z } from 'zod'
 
 export const ${c}Schema = z.object({
   id: z.string()
 })
-
-export type ${P} = z.infer<typeof ${c}Schema>
 `,
       [`${dir}/queries.ts`]: `import { queryOptions } from '@tanstack/react-query'
 
 import { ${c}Schema } from './schema'
 
-export const ${c}Keys = {
+const ${c}Keys = {
   all: ['${k}'] as const
 }
 
@@ -256,27 +280,7 @@ export function ${P}Page() {
   )
 }
 `,
-      [`${dir}/${k}-page.test.tsx`]: `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-
-import { ${P}Page } from './${k}-page'
-import { ${c}QueryOptions } from './queries'
-
-describe('${P}Page', () => {
-  it('lists what the query returned under its title', () => {
-    const queryClient = new QueryClient()
-    queryClient.setQueryData(${c}QueryOptions().queryKey, [{ id: 'first' }])
-    render(
-      <QueryClientProvider client={queryClient}>
-        <${P}Page />
-      </QueryClientProvider>
-    )
-    expect(screen.getByRole('heading', { level: 1 })).toBeInTheDocument()
-    expect(screen.getByText('first')).toBeInTheDocument()
-  })
-})
-`
+      [`${dir}/${k}-page.test.tsx`]: featurePageTest(k, P, c)
     })
     next(genNext.feature(k))
   },

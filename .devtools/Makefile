@@ -11,7 +11,6 @@ clean: ## Remove build outputs
 
 # >>> template:init
 .PHONY: init test
-DUPLICATION_IGNORE += **/.template/profiles/**
 check: test
 test: ## Test the sync and init scripts (template only)
 	@$(ROOT)/.template/test.sh

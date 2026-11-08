@@ -1,0 +1,12 @@
+[global]
+remove_todos = true
+remove_fixme = true
+remove_docs = true
+exclude = [
+  "**/*.{yml,yaml,toml,json,jsonc,md,sh,mk,tf,css,html,xml,properties,sql,txt,lock}",
+  "**/Makefile",
+  "**/Dockerfile",
+  "**/.*",
+  "**/src/routeTree.gen.ts",
+  "**/src/components/ui/**",
+]
