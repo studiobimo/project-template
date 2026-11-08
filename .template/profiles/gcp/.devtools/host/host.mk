@@ -6,7 +6,7 @@
 BUNDLE_DIR := dist/client
 TSC_PROJECTS += server
 
-TOFU := cd $(ROOT)/infra && $(MISE) exec -- tofu
+TOFU := cd $(ROOT)/infra && $(MISE_EXEC) tofu
 
 # $${have} and $${want} are the shell variables of node-image-check's recipe.
 MSG_NODE_MISMATCH = $(GLYPH_FAIL) the Dockerfile copies Node $${have:-(no FROM node:<version>-…)}, \
@@ -16,7 +16,7 @@ MSG_NO_GCLOUD := $(GLYPH_FAIL) deploying needs gcloud: https://cloud.google.com/
 # A value from infra/project.auto.tfvars.json, the file OpenTofu reads its variables from:
 # one place for the project, region and service name. It is a shell substitution, so it is
 # read when a recipe runs rather than every time make starts.
-setting = $$(cd $(ROOT) && $(MISE) exec -- node -p "require('./infra/project.auto.tfvars.json').$(1)")
+setting = $$(cd $(ROOT) && $(MISE_EXEC) node -p "require('./infra/project.auto.tfvars.json').$(1)")
 
 .PHONY: build-server start deploy node-image-check infra-fmt infra-fmt-check infra-bootstrap infra-plan infra-apply infra-github
 
@@ -27,12 +27,12 @@ build-server: ## Bundle server/index.ts and what it imports into dist/server/ind
 	$(APP_PNPM) exec vite build --config $(ROOT)/.devtools/host/server.ts
 
 start: build-app ## Run the production build as Cloud Run runs it, on PORT or 8080
-	$(APP_CD) && $(MISE) exec -- node --enable-source-maps dist/server/index.mjs
+	$(APP_CD) && $(MISE_EXEC) node --enable-source-maps dist/server/index.mjs
 
 # The image copies Node from the official image's exact tag; mise.toml pins the Node that
 # builds and tests the app. They change together, so production runs what was tested.
 node-image-check: ## Fail when the Dockerfile's Node is not the one mise.toml pins
-	@want="$$(cd $(ROOT) && $(MISE) exec -- node -p process.versions.node)"; \
+	@want="$$(cd $(ROOT) && $(MISE_EXEC) node -p process.versions.node)"; \
 		have="$$(sed -n 's/^FROM node:\([0-9][0-9.]*\)-.*/\1/p' $(ROOT)/Dockerfile)"; \
 		[ "$${have}" = "$${want}" ] || { echo "$(MSG_NODE_MISMATCH)" >&2; exit 1; }
 

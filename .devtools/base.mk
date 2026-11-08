@@ -2,7 +2,13 @@
 
 ROOT := $(abspath ..)
 MISE := mise
-LEFTHOOK := $(MISE) exec -- lefthook
+
+# A hosted build image, such as Workers Builds, has no mise: tools run from its PATH there, and
+# a host's deploy target checks those are the versions mise.toml pins.
+HAS_MISE := $(shell command -v $(MISE) 2>/dev/null)
+MISE_EXEC := $(if $(HAS_MISE),$(MISE_EXEC))
+pinned-version = $(shell sed -n 's/^$(1) = "\(.*\)"/\1/p' $(ROOT)/mise.toml)
+LEFTHOOK := $(MISE_EXEC) lefthook
 
 # What a target prints, as the scripts' strings.sh prints it. A profile's own messages are
 # variables at the top of its .mk file.
@@ -26,11 +32,11 @@ lint: ## Run the pre-commit hook on all files
 check: duplication
 
 duplication: ## Fail on copy-pasted code, skipping what .jscpd.json ignores
-	cd $(ROOT) && $(MISE) exec -- jscpd --exit-code 1 --no-colors .
+	cd $(ROOT) && $(MISE_EXEC) jscpd --exit-code 1 --no-colors .
 
 scan: ## Secret scan of the whole history, and the workflow security audit
-	cd $(ROOT) && $(MISE) exec -- gitleaks git --redact
-	cd $(ROOT) && $(MISE) exec -- zizmor --no-progress .github
+	cd $(ROOT) && $(MISE_EXEC) gitleaks git --redact
+	cd $(ROOT) && $(MISE_EXEC) zizmor --no-progress .github
 
 lock-tools: ## Refresh mise.lock after changing a tool version in mise.toml
 	cd $(ROOT) && $(MISE) lock

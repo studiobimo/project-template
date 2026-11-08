@@ -26,8 +26,13 @@ every entry of `APPS`), so run `wrangler` there.
   production when `release.yml` calls it for a release. A run from Actions defaults to the
   first environment in `DEPLOY_ENVS`. It needs a repository variable,
   `CLOUDFLARE_ACCOUNT_ID`, and in each of its GitHub environments a `CLOUDFLARE_API_TOKEN`
-  secret, from the "Edit Cloudflare Workers" template and limited to the account. Don't also
-  connect Workers Builds, or every push deploys twice.
+  secret, from the "Edit Cloudflare Workers" template and limited to the account.
+- **Or Workers Builds runs it**, with no Cloudflare credential in GitHub: connect the repo
+  to each Worker, set its branch to the environment's, and its deploy command to
+  `make -C .devtools deploy ENV=<env>`. The image has no mise, so the target uses its node
+  and pnpm, and refuses to deploy unless they are the ones `mise.toml` pins: set the build
+  variables `NODE_VERSION` and `PNPM_VERSION` to match. Use one of the two, never both, or
+  every push deploys twice.
 - **Secrets** are never committed. List their names in `.dev.vars.example`. Put local
   values in `.dev.vars`, and deployed ones with
   `pnpm exec wrangler secret put <NAME> --env <env>`.
