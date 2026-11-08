@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.2](https://github.com/studiobimo/project-template/compare/v0.11.1...v0.11.2) (2026-11-08)
+
+
+### Bug Fixes
+
+* **devtools:** drop a duplicate knip.json key from the generator ([#79](https://github.com/studiobimo/project-template/issues/79)) ([774b71a](https://github.com/studiobimo/project-template/commit/774b71a9268c871fe320ee8724b50d20994a63f5))
+
 ## [0.11.1](https://github.com/studiobimo/project-template/compare/v0.11.0...v0.11.1) (2026-11-08)
 
 
