@@ -101,6 +101,10 @@ pre-commit:
       file_types: text
       run: mise exec -- editorconfig-checker {staged_files}
 
+    - name: uncomment
+      glob: '*.{js,mjs,cjs,jsx,ts,mts,cts,tsx,java,kt,kts,groovy,gradle,py,go,rs}'
+      run: mise exec -- uncomment --check --remove-todo --remove-fixme --remove-doc {staged_files}
+
 pre-push:
   jobs:
     - name: lychee

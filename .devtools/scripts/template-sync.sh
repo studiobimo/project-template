@@ -38,15 +38,7 @@ mode=sync
 from=""
 ref=""
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --check) mode=check; shift ;;
-        --from) need_value "$@"; from="$2"; shift 2 ;;
-        --ref) need_value "$@"; ref="$2"; shift 2 ;;
-        -h | --help) usage_of "${BASH_SOURCE[0]}"; exit "${EXIT_OK}" ;;
-        *) die "${MSG_UNKNOWN_ARG}" "$1" ;;
-    esac
-done
+parse_check_from_ref "$@"
 
 root="$(git rev-parse --show-toplevel 2>/dev/null)" || die "${MSG_NOT_GIT_REPO}"
 cd "${root}"

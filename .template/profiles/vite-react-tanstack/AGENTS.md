@@ -136,16 +136,15 @@ export default mergeConfig(base, defineConfig({ test: { environment: 'node' } })
 - **Styling uses the design tokens.** No raw colour values outside `src/index.css`; use the
   semantic utilities (`bg-card`, `text-muted-foreground`).
 - **Abstract before duplicating.** Extend an existing component or helper rather than adding
-  a parallel one.
-- **Comments say why, not what.** Names carry the meaning; a comment is for a workaround, an
-  invariant or a trap.
+  a parallel one. knip fails on unused files, exports and dependencies; `knip.json` exempts the
+  shadcn/ui primitives and the dependencies a new app has before its first feature.
 
 ### Commands
 
 ```sh
 make -C .devtools install   # the packages pnpm-lock.yaml pins
 make -C .devtools dev       # Vite dev server on http://localhost:5173
-make -C .devtools ci        # build, types, ESLint, Prettier, tests, budget, audit
+make -C .devtools ci        # build, types, ESLint, knip, jscpd, Prettier, tests, budget, audit
 make -C .devtools fmt       # Prettier over the web sources
 ```
 <!-- <<< template:vite -->

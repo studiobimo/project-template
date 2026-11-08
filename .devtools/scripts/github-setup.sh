@@ -34,15 +34,7 @@ mode=apply
 from=""
 ref="${SETTINGS_REF_DEFAULT}"
 
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --check) mode=check; shift ;;
-        --from) need_value "$@"; from="$2"; shift 2 ;;
-        --ref) need_value "$@"; ref="$2"; shift 2 ;;
-        -h | --help) usage_of "${BASH_SOURCE[0]}"; exit "${EXIT_OK}" ;;
-        *) die "${MSG_UNKNOWN_ARG}" "$1" ;;
-    esac
-done
+parse_check_from_ref "$@"
 
 for tool in gh jq; do
     command -v "${tool}" >/dev/null 2>&1 || die "${MSG_NEEDS_TOOL}" "${tool}" "${tool}"
