@@ -576,7 +576,6 @@ ${join(appDir, 'src/components/ui/')}
 pnpm-lock.yaml
 `,
     'knip.json': knipConfig(appDir),
-    'knip.json': knipConfig(appDir),
     '.claude/launch.json': claudeLaunch
   }
 }
