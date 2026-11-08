@@ -33,5 +33,5 @@ editorconfig-checker = "4.0.2"
 "pipx:pre-commit-hooks" = "6.0.0"
 "pipx:check-jsonschema" = "0.38.2"
 "npm:jscpd" = "5.4.2"
-"github:Goldziher/uncomment" = "3.10.4"
+"github:Goldziher/uncomment" = "3.10.3"
 # <<< template:base
