@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.3](https://github.com/studiobimo/project-template/compare/v0.11.2...v0.11.3) (2026-11-08)
+
+
+### Bug Fixes
+
+* **devtools:** leave the managed devtools out of the comment check ([#81](https://github.com/studiobimo/project-template/issues/81)) ([50bfa5c](https://github.com/studiobimo/project-template/commit/50bfa5c2f29381d28602d960844426759c9264ac))
+
 ## [0.11.2](https://github.com/studiobimo/project-template/compare/v0.11.1...v0.11.2) (2026-11-08)
 
 
