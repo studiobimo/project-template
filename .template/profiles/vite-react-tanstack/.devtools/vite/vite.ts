@@ -35,7 +35,8 @@ export async function app({ site, vendors: extra = {} }: AppOptions): Promise<Us
         target: 'react',
         autoCodeSplitting: true,
         quoteStyle: 'single',
-        semicolons: false
+        semicolons: false,
+        routeTreeFileHeader: []
       }),
       react(),
       tailwindcss(),

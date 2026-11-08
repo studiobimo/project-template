@@ -1,0 +1,20 @@
+name: Repo health
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+  merge_group:
+
+permissions: {}
+
+jobs:
+  health:
+    permissions:
+      contents: read
+      issues: read
+    uses: studiobimo/.github/.github/workflows/ci-repo-health.yml@v1
+    with:
+      allow-config-change: ${{ contains(github.event.pull_request.labels.*.name, 'repo-health-config-change') }}
+      minimum-reduction: ${{ github.actor != 'dependabot[bot]' && 1 || 0 }}

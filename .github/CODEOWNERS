@@ -19,4 +19,7 @@
 /.commitlintrc.yaml              @davidmoralesz
 /.claude/                        @davidmoralesz
 /.codex/                         @davidmoralesz
+/.repo-health/                   @davidmoralesz
+/.uncomment.toml                 @davidmoralesz
+/.jscpd.json                     @davidmoralesz
 # <<< template:overrides

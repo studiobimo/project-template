@@ -33,6 +33,9 @@ file  .github/zizmor.yml
 file  .github/workflows/pr-checks.yml           required
 file  .github/workflows/template-drift.yml      required
 file  .github/workflows/issue-title.yml         required
+file  .github/workflows/repo-health.yml         required
+file  .uncomment.toml
+file  .jscpd.json
 
 block .gitignore              base
 block .gitattributes          base

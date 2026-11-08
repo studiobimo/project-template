@@ -44,8 +44,6 @@ ALL_APPS = $(or $(APPS),$(APP_DIR))
 # hooks, and many of those files are managed: formatting them here would be drift.
 PRETTIER_FILES := '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
 
-DUPLICATION_IGNORE += **/pnpm-lock.yaml **/src/routeTree.gen.ts **/src/components/ui/**
-
 # A hosting profile deploys to these environments, and each ships from one branch, so a laptop
 # cannot put a feature branch on production. Its deploy target takes ENV=<one of them>; the
 # recipe line stops it unless it was given one. A project that has no development environment

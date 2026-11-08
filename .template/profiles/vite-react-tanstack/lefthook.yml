@@ -32,11 +32,6 @@ pre-commit:
         - run: test ! -d node_modules
       run: mise exec -- pnpm exec eslint --max-warnings=0 --no-warn-ignored {staged_files}
 
-    - name: uncomment
-      exclude:
-        - '**/src/components/ui/**'
-        - 'src/components/ui/**'
-
     # Like the whitespace fixers: it rewrites the files, then fails so the change is seen.
     - name: prettier
       glob: '*.{js,mjs,cjs,jsx,ts,tsx,css,html}'

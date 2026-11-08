@@ -2,6 +2,47 @@ import { join } from 'node:path'
 
 const compatibilityDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
+const workerIndex = `import { Hono } from 'hono'
+import { secureHeaders } from 'hono/secure-headers'
+
+const app = new Hono<{ Bindings: Env }>().basePath('/api')
+
+app.use(secureHeaders())
+
+app.get('/health', (c) => c.json({ ok: true }))
+
+app.notFound((c) => c.json({ error: 'Not found' }, 404))
+app.onError((error, c) => {
+  console.error(error)
+  return c.json({ error: 'Internal error' }, 500)
+})
+
+export default app
+`
+
+const workerIndexTest = `import { afterAll, describe, expect, it } from 'vitest'
+import { getPlatformProxy } from 'wrangler'
+
+import app from './index'
+
+const platform = await getPlatformProxy<Env>()
+afterAll(() => platform.dispose())
+
+describe('worker', () => {
+  it('answers /api/health', async () => {
+    const response = await app.request('/api/health', {}, platform.env)
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual({ ok: true })
+  })
+
+  it('answers an unknown /api path with a JSON 404', async () => {
+    const response = await app.request('/api/nothing-here', {}, platform.env)
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({ error: 'Not found' })
+  })
+})
+`
+
 export default ({ slug, repo, deployEnvs }) => ({
   dependencies: ['hono'],
   devDependencies: ['@cloudflare/vite-plugin', 'wrangler'],
@@ -47,44 +88,7 @@ ${deployEnvs.map((name) => `    "${name}": {}`).join(',\n')}
   "include": ["."]
 }
 `,
-    'worker/index.ts': `import { Hono } from 'hono'
-import { secureHeaders } from 'hono/secure-headers'
-
-const app = new Hono<{ Bindings: Env }>().basePath('/api')
-
-app.use(secureHeaders())
-
-app.get('/health', (c) => c.json({ ok: true }))
-
-app.notFound((c) => c.json({ error: 'Not found' }, 404))
-app.onError((error, c) => {
-  console.error(error)
-  return c.json({ error: 'Internal error' }, 500)
-})
-
-export default app
-`,
-    'worker/index.test.ts': `import { afterAll, describe, expect, it } from 'vitest'
-import { getPlatformProxy } from 'wrangler'
-
-import app from './index'
-
-const platform = await getPlatformProxy<Env>()
-afterAll(() => platform.dispose())
-
-describe('worker', () => {
-  it('answers /api/health', async () => {
-    const response = await app.request('/api/health', {}, platform.env)
-    expect(response.status).toBe(200)
-    expect(await response.json()).toEqual({ ok: true })
-  })
-
-  it('answers an unknown /api path with a JSON 404', async () => {
-    const response = await app.request('/api/nothing-here', {}, platform.env)
-    expect(response.status).toBe(404)
-    expect(await response.json()).toEqual({ error: 'Not found' })
-  })
-})
-`
+    'worker/index.ts': workerIndex,
+    'worker/index.test.ts': workerIndexTest
   }
 })
