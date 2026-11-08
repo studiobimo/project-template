@@ -7,6 +7,7 @@ exclude = [
   "**/Makefile",
   "**/Dockerfile",
   "**/.*",
+  "**/.devtools/**",
   "**/src/routeTree.gen.ts",
   "**/src/components/ui/**",
 ]
