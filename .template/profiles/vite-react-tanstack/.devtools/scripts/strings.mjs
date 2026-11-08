@@ -1,12 +1,3 @@
-// Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
-//
-// Every message the profile's scripts print, gen.mjs, packages.mjs and bundle-budget.mjs, in
-// one place: the Node half of what .devtools/scripts/strings.sh is to the shell scripts. A
-// message that names a value is a function of it, so the value is always an argument.
-//
-// The text of the files gen.mjs writes is not here. Those are templates of code, and a
-// generated app's own strings start in its src/locales/ catalogs.
-
 export const glyph = { ok: '✔', fail: '✖' }
 export const devtools = 'make -C .devtools'
 export const gen = 'node .devtools/scripts/gen.mjs'
@@ -32,7 +23,6 @@ export const genMessages = {
     `APP_DIR is ${appDir}: list it under packages: at the top of pnpm-workspace.yaml first`
 }
 
-// What to do after each generator, one line per step.
 export const genNext = {
   route: 'the router plugin adds it to src/routeTree.gen.ts on the next dev or build run',
   feature: (name) => `route it: ${gen} route /${name} --feature ${name}`,

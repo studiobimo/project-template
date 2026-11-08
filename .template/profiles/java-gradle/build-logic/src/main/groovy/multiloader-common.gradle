@@ -1,25 +1,17 @@
-// Conventions shared by every subproject (common, fabric, neoforge).
 plugins {
     id 'java-library'
     id 'com.diffplug.spotless'
     id 'net.ltgt.errorprone'
 }
 
-// Precompiled script plugins cannot use the type-safe accessor, so look the catalog up by name.
 def libs = versionCatalogs.named('libs')
 
-// Two values differ from one project to the next and live in gradle.properties:
-//   nullaway_package      the package NullAway enforces nullness in
-//   external_source_path  sources copied in from another repository, as a path under a source
-//                         root (dev/bimo/model); Error Prone and Spotless leave them alone.
-//                         Empty or unset when there are none.
 def nullawayPackage = findProperty('nullaway_package')
 if (!nullawayPackage) {
     throw new GradleException('Set nullaway_package in gradle.properties (the package NullAway checks).')
 }
 def externalSourcePath = (findProperty('external_source_path') ?: '').toString()
 
-// .java-version is read by Gradle, actions/setup-java (java-version-file), jenv, mise and asdf.
 def javaVersion = rootProject.layout.projectDirectory.file('.java-version').asFile.text.trim() as int
 
 base {
@@ -37,47 +29,30 @@ dependencies {
     errorprone(libs.findLibrary('nullaway').get())
 }
 
-// Pin every resolved dependency (gradle.lockfile per project). Regenerate with
-// `make -C .devtools lock` after changing versions.
+def modulesResolvedOnlyOnSomeHostOperatingSystems = [
+        macOS      : 'ca.weblite:java-objc-bridge',
+        linux      : 'io.netty:netty-transport-native-epoll',
+        macOSAndBsd: 'io.netty:netty-transport-native-kqueue',
+]
+
 dependencyLocking {
     lockAllConfigurations()
-
-    // Minecraft's library manifest gates a few modules on the host OS, so the set of
-    // resolved modules differs between a developer's machine and a CI runner. Dependency
-    // locking is strict in both directions -- it fails on a locked module that did not
-    // resolve *and* on a resolved module that is not locked -- so a lockfile written on
-    // one OS can never validate on another, and a union of both would fail everywhere.
-    // Ignoring them keeps one lockfile valid on every platform.
-    //
-    // These stay pinned: gradle/verification-metadata.xml carries the sha256 of every
-    // platform's artifact, so an unexpected version has no trusted checksum and fails.
-    //
-    // Only modules that are wholly OS-gated need this. LWJGL and jtracy ship their natives
-    // as classifiers of a module that resolves everywhere, and locking ignores classifiers.
-    ignoredDependencies.addAll(
-            'ca.weblite:java-objc-bridge',          // macOS only
-            'io.netty:netty-transport-native-epoll', // Linux only
-            'io.netty:netty-transport-native-kqueue' // macOS and BSD only
-    )
+    ignoredDependencies.addAll(modulesResolvedOnlyOnSomeHostOperatingSystems.values())
 }
 
 tasks.withType(JavaCompile).configureEach {
     options.encoding = 'UTF-8'
     options.release = javaVersion
-    // -classfile: third-party jars (e.g. Guava via Minecraft) reference annotations that aren't on
-    // the classpath. Nothing we can fix, and -Werror would turn it into a build failure.
     options.compilerArgs.addAll(['-Xlint:all,-processing,-serial,-classfile', '-Werror'])
     options.errorprone {
         disableWarningsInGeneratedCode = true
         excludedPaths = externalSourcePath ? ".*/(build/generated|${externalSourcePath})/.*".toString() : '.*/build/generated/.*'
-        // Minecraft is not null-annotated; enforce nullness only in our packages.
         option('NullAway:AnnotatedPackages', nullawayPackage.toString())
         option('NullAway:JSpecifyMode', 'true')
         error('NullAway')
     }
 }
 
-// Error Prone only on production code; tests favor readability over lint strictness.
 tasks.named('compileTestJava', JavaCompile) {
     options.errorprone.enabled = false
     options.compilerArgs.remove('-Werror')
@@ -95,8 +70,6 @@ spotless {
     }
 }
 
-// Reproducible archives: identical inputs produce byte-identical jars, which
-// makes build provenance attestations meaningful.
 tasks.withType(AbstractArchiveTask).configureEach {
     archiveVersion = "${project.version}+mc${minecraft_version}"
     preserveFileTimestamps = false
@@ -156,7 +129,6 @@ processResources {
     inputs.properties(expandProps)
 }
 
-// Resolves every resolvable configuration so `--write-locks` captures all of them.
 tasks.register('resolveAndLockAll') {
     group = 'dependency locking'
     description = 'Resolves all configurations; run with --write-locks to refresh gradle.lockfile.'

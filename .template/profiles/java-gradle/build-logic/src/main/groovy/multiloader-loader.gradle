@@ -1,5 +1,3 @@
-// Conventions for loader subprojects: compile and package the common sources
-// into each loader's jar, and publish that jar when a release is tagged.
 plugins {
     id 'multiloader-common'
     id 'me.modmuss50.mod-publish-plugin'
@@ -42,15 +40,11 @@ tasks.named('sourcesJar', Jar) {
     from(configurations.commonResources)
 }
 
-// Publishing. `./gradlew publishMods` is what the release workflow runs, with RELEASE_TAG set to
-// the tag release-please just cut; without it nothing is uploaded and each platform only prints
-// what it would have sent.
 def releaseTag = providers.environmentVariable('RELEASE_TAG')
 def modJar = tasks.named('jar', Jar).flatMap { it.archiveFile }
 
 publishMods {
     file = modJar
-    // Both loaders publish under one project, so the version says which jar it is.
     version = "${project.version}-${project.name}"
     displayName = "${mod_name} ${project.version} for ${project.name == 'neoforge' ? 'NeoForge' : 'Fabric'}"
     changelog = "See the [release notes](${sources}/releases/tag/v${project.version})."

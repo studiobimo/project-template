@@ -1,12 +1,5 @@
-// Managed by studiobimo/project-template (profile gcp); change it there.
-//
-// The project's own Cloud Run files and packages, for `gen.mjs host` (or `gen.mjs app`) to
-// write and install. Once written they are the project's: sync never compares them.
-//
-// What deploys the repository stays at its root, in a workspace too: repoFiles.
 import { join } from 'node:path'
 
-/** The .gcloudignore lines for a directory, which only count once each parent is let back in. */
 const uploadOnly = (path) =>
   path
     .split('/')
@@ -18,7 +11,6 @@ const uploadOnly = (path) =>
 
 export default ({ slug, appDir, repo, deployEnvs }) => ({
   dependencies: ['hono', '@hono/node-server'],
-  // .devtools/host/vite.ts imports them, and Node resolves that upward from .devtools/.
   devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
   next: [
     'edit infra/project.auto.tfvars.json   # the GCP project, region, repository, billing account, budget',
@@ -41,9 +33,6 @@ export default ({ slug, appDir, repo, deployEnvs }) => ({
 `,
     'server/app.ts': `import { Hono } from 'hono'
 
-// The API, under /api. A route validates what it reads with the feature's schema from
-// src/features/<name>/schema.ts, the one the client parses the response with. Settings and
-// secrets come from process.env, which infra/ sets on each service.
 const app = new Hono().basePath('/api')
 
 app.get('/health', (c) => c.json({ ok: true }))
@@ -82,9 +71,6 @@ import { secureHeaders } from 'hono/secure-headers'
 
 import api from './app'
 
-// Vite names everything in assets/ by its content, so a file there never changes and is
-// cached for a year. Anything else, index.html above all, is checked on every load, so a
-// deploy reaches the next one.
 const cache = createMiddleware(async (c, next) => {
   await next()
   if (c.res.status === 200) {
@@ -93,17 +79,11 @@ const cache = createMiddleware(async (c, next) => {
   }
 })
 
-// Asks search engines to leave the site out: for development, which is public too.
 const noindex = createMiddleware(async (c, next) => {
   await next()
   c.header('X-Robots-Tag', 'noindex')
 })
 
-/**
- * Everything the service answers: /api/* from the app in app.ts, and the built client from
- * root. A path that is neither gets index.html, for the client's router, except under
- * assets/, where a missing file is a 404 rather than a page cached for a year.
- */
 export function site(root: string, options: { indexed?: boolean } = {}) {
   const app = new Hono()
   if (options.indexed === false) app.use(noindex)
@@ -177,16 +157,12 @@ import { serve } from '@hono/node-server'
 
 import { site } from './site'
 
-// This runs as dist/server/index.mjs, so the client is beside it, in dist/client.
 const root = fileURLToPath(new URL('../client', import.meta.url))
 const port = Number(process.env.PORT ?? 8080)
-// infra/ sets INDEXED=false on development.
 const app = site(root, { indexed: process.env.INDEXED !== 'false' })
 
 const server = serve({ fetch: app.fetch, port }, () => console.log(\`listening on \${port}\`))
 
-// Cloud Run sends SIGTERM and waits ten seconds before it stops the instance: finish the
-// requests in flight, then exit.
 process.on('SIGTERM', () => server.close(() => process.exit(0)))
 `
   },

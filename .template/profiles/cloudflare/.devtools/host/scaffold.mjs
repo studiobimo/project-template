@@ -1,11 +1,5 @@
-// Managed by studiobimo/project-template (profile cloudflare); change it there.
-//
-// The project's own Cloudflare files and packages, for `gen.mjs host` (or `gen.mjs app`) to
-// write and install. Once written they are the project's: sync never compares them.
 import { join } from 'node:path'
 
-// The newest date the workerd that pnpm installs is sure to know: pnpm takes nothing less
-// than a week old, and a release supports dates up to its own.
 const compatibilityDate = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10)
 
 export default ({ slug, repo, deployEnvs }) => ({
@@ -56,9 +50,6 @@ ${deployEnvs.map((name) => `    "${name}": {}`).join(',\n')}
     'worker/index.ts': `import { Hono } from 'hono'
 import { secureHeaders } from 'hono/secure-headers'
 
-// Only /api/* reaches the Worker: wrangler.jsonc's run_worker_first. A route validates what
-// it reads with the feature's schema from src/features/<name>/schema.ts, the one the client
-// parses the response with.
 const app = new Hono<{ Bindings: Env }>().basePath('/api')
 
 app.use(secureHeaders())
@@ -78,7 +69,6 @@ import { getPlatformProxy } from 'wrangler'
 
 import app from './index'
 
-// wrangler.jsonc's bindings and .dev.vars, run locally as vite dev runs them.
 const platform = await getPlatformProxy<Env>()
 afterAll(() => platform.dispose())
 
