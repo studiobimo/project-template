@@ -1,18 +1,4 @@
 #!/usr/bin/env node
-// Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
-//
-// One check, run in the workspace package it starts in. vite.mk runs it in every package with
-// `pnpm --recursive exec`, so a new package is covered by what it has, not by a list in
-// Makefile:
-//
-//   packages.mjs test                 vitest run: the package's vitest.config.ts, or the shared
-//                                     default when it has none. Only a package with a src/.
-//   packages.mjs typecheck <app>...   tsc -b. A package with a src/ and no tsconfig.json fails.
-//                                     The apps are type-checked by typecheck-app, not here.
-//   packages.mjs apps <app>...        fails on a package with a vite.config.ts that is not one
-//                                     of the apps, since only an app has a build and a budget
-//
-// <app> is an app's directory from the repository's root, as APPS and APP_DIR list it.
 import { spawnSync } from 'node:child_process'
 import { existsSync, realpathSync } from 'node:fs'
 import { dirname, join, relative } from 'node:path'

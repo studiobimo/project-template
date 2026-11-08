@@ -1,15 +1,4 @@
 #!/usr/bin/env node
-// Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
-//
-// Fails when one JavaScript chunk, or the client bundle as a whole, outgrows its budget.
-// The budgets are tripwires for a runaway import, not performance targets: when a real
-// feature needs more, raise the number in the same pull request so the growth is reviewed.
-// The chunk limit is raw size, like Vite's own 500 KiB warning; the total is gzipped,
-// which is closer to what a visitor downloads.
-//
-//   bundle-budget.mjs [--dir dist] [--chunk-kib 450] [--total-kib 550]
-//
-// Run it after the build. It reads every .js and .css file under --dir and changes nothing.
 import { readdirSync, readFileSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { parseArgs } from 'node:util'
