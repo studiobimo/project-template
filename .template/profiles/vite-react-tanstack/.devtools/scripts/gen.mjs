@@ -188,6 +188,399 @@ describe('${P}Page', () => {
 `
 }
 
+const quote = (text) => text.replaceAll('\\', '\\\\').replaceAll("'", "\\'")
+
+const manifest = (packageName, scripts) =>
+  `${JSON.stringify({ name: packageName, private: true, type: 'module', scripts }, null, 2)}\n`
+const appScripts = {
+  dev: 'vite',
+  build: 'vite build',
+  preview: 'vite preview',
+  test: 'vitest',
+  typecheck: 'tsc -b'
+}
+const repoScripts = {
+  lint: 'eslint --max-warnings=0 .',
+  format: "prettier --write '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'",
+  gen: 'node .devtools/scripts/gen.mjs'
+}
+const knipApp = {
+  entry: ['src/lib/utils.ts'],
+  ignore: ['src/components/ui/**'],
+  ignoreDependencies: ['shadcn', 'zod']
+}
+const knipConfig = (dir) => {
+  const shared = { $schema: 'https://unpkg.com/knip@6/schema.json' }
+  const config =
+    dir === '.'
+      ? { ...shared, ...knipApp, ignore: ['.devtools/**', ...knipApp.ignore] }
+      : { ...shared, ignore: ['.devtools/**'], workspaces: { [dir]: knipApp } }
+  return `${JSON.stringify(config, null, 2)}\n`
+}
+const eslintConfig = (path, rules) => `import { defineConfig } from 'eslint/config'
+
+import { ${rules} } from '${path}/.devtools/vite/eslint.js'
+
+export default defineConfig([${rules}])
+`
+
+const appDependencies = [
+  'react',
+  'react-dom',
+  '@tanstack/react-router',
+  '@tanstack/react-query',
+  'zod',
+  'clsx',
+  'tailwind-merge',
+  'i18next',
+  'react-i18next',
+  'i18next-browser-languagedetector'
+]
+
+const appDevDependencies = [
+  '@types/react',
+  '@types/react-dom',
+  '@testing-library/react',
+  '@testing-library/dom',
+  '@testing-library/jest-dom',
+  'shadcn',
+  'tailwindcss'
+]
+
+const toolDependencies = (nodeMajor) => [
+  'vite',
+  '@vitejs/plugin-react',
+  '@tanstack/router-plugin',
+  'tailwindcss',
+  '@tailwindcss/vite',
+  'typescript@~6.0.3',
+  `@types/node@^${nodeMajor}`,
+  'vitest',
+  'jsdom',
+  'eslint',
+  '@eslint/js',
+  'typescript-eslint',
+  'globals',
+  'eslint-plugin-react-hooks',
+  'eslint-plugin-react-refresh',
+  'eslint-plugin-jsx-a11y',
+  '@tanstack/eslint-plugin-query',
+  '@tanstack/eslint-plugin-router',
+  'eslint-plugin-i18next',
+  'prettier',
+  'knip'
+]
+
+const claudeLaunch = `{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "dev",
+      "runtimeExecutable": "make",
+      "runtimeArgs": ["-C", ".devtools", "dev"],
+      "port": 5173
+    }
+  ]
+}
+`
+
+const appSource = {
+  'index.html': `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="%APP_THEME_COLOR%" />
+    <title>%APP_TITLE%</title>
+    <meta name="description" content="%APP_DESCRIPTION%" />
+    <link rel="canonical" href="%APP_URL%" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="%APP_NAME%" />
+    <meta property="og:title" content="%APP_TITLE%" />
+    <meta property="og:description" content="%APP_DESCRIPTION%" />
+    <meta property="og:url" content="%APP_URL%" />
+    <meta property="og:image" content="%APP_OG_IMAGE%" />
+    <meta property="og:locale" content="%APP_LOCALE%" />
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+`,
+  'src/index.css': `@import 'tailwindcss';
+`,
+  'src/lib/utils.ts': `import { clsx, type ClassValue } from 'clsx'
+import { twMerge } from 'tailwind-merge'
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+`,
+  'src/router.ts': `import type { QueryClient } from '@tanstack/react-query'
+import { createRouter, type RouterHistory } from '@tanstack/react-router'
+
+import { routeTree } from './routeTree.gen'
+
+export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
+  return createRouter({
+    routeTree,
+    history,
+    context: { queryClient },
+    defaultPreload: 'intent',
+    defaultPreloadStaleTime: 0,
+    scrollRestoration: true
+  })
+}
+
+declare module '@tanstack/react-router' {
+  interface Register {
+    router: ReturnType<typeof createAppRouter>
+  }
+}
+`,
+  'src/router.test.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
+import { render, screen } from '@testing-library/react'
+import { describe, expect, it } from 'vitest'
+
+import { createAppRouter } from './router'
+
+describe('router', () => {
+  it('renders the home page at /', async () => {
+    const queryClient = new QueryClient()
+    const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: ['/'] }))
+    render(
+      <QueryClientProvider client={queryClient}>
+        <RouterProvider router={router} />
+      </QueryClientProvider>
+    )
+    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
+  })
+})
+`,
+  'src/main.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { RouterProvider } from '@tanstack/react-router'
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+
+import './i18n/config'
+import { createAppRouter } from './router'
+import './index.css'
+
+const queryClient = new QueryClient()
+const router = createAppRouter(queryClient)
+
+createRoot(document.getElementById('root')!).render(
+  <StrictMode>
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
+  </StrictMode>
+)
+`,
+  'src/routes/__root.tsx': `import type { QueryClient } from '@tanstack/react-query'
+import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
+
+export interface RouterContext {
+  queryClient: QueryClient
+}
+
+export const Route = createRootRouteWithContext<RouterContext>()({
+  component: RootLayout
+})
+
+function RootLayout() {
+  return <Outlet />
+}
+`,
+  'src/routes/index.tsx': `import { createFileRoute } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
+
+import { site } from '@/config/site'
+
+export const Route = createFileRoute('/')({
+  component: HomeRoute
+})
+
+function HomeRoute() {
+  const { t } = useTranslation()
+  return (
+    <main className="mx-auto max-w-2xl p-8">
+      <h1 className="text-3xl font-semibold">{t('home.title', { name: site.name })}</h1>
+      <p className="mt-2 text-neutral-600">{t('home.description')}</p>
+    </main>
+  )
+}
+`,
+  'src/i18n/config.ts': `import i18n from 'i18next'
+import LanguageDetector from 'i18next-browser-languagedetector'
+import { initReactI18next } from 'react-i18next'
+
+import { site } from '@/config/site'
+
+type Catalog = Record<string, unknown>
+
+const catalogs = import.meta.glob('../locales/*/*.json', {
+  eager: true,
+  import: 'default'
+}) as Record<string, Catalog>
+
+export const resources: Record<string, Record<string, Catalog>> = {}
+for (const [path, catalog] of Object.entries(catalogs)) {
+  const [language, file] = path.split('/').slice(-2)
+  resources[language] = { ...resources[language], [file.replace(/\\.json$/, '')]: catalog }
+}
+
+export const defaultLanguage = site.locale.split('_')[0]
+
+void i18n
+  .use(LanguageDetector)
+  .use(initReactI18next)
+  .init({
+    resources,
+    fallbackLng: defaultLanguage,
+    supportedLngs: Object.keys(resources),
+    defaultNS: 'common',
+    interpolation: { escapeValue: false },
+    initAsync: false,
+    detection: { order: ['querystring', 'localStorage', 'navigator'], caches: ['localStorage'] },
+    saveMissing: import.meta.env.DEV,
+    missingKeyHandler: (_languages, namespace, key) => {
+      const message = \`i18n: no string for \${namespace}:\${key}\`
+      if (import.meta.env.MODE === 'test') throw new Error(message)
+      console.warn(message)
+    }
+  })
+
+const setLang = (language: string) => (document.documentElement.lang = language)
+setLang(i18n.resolvedLanguage ?? defaultLanguage)
+i18n.on('languageChanged', setLang)
+`,
+  'src/i18n/locales.test.ts': `import { describe, expect, it } from 'vitest'
+
+import { defaultLanguage, resources } from './config'
+
+const keys = (catalog: object, prefix = ''): string[] =>
+  Object.entries(catalog)
+    .flatMap(([key, value]) =>
+      value && typeof value === 'object' ? keys(value, \`\${prefix}\${key}.\`) : [\`\${prefix}\${key}\`]
+    )
+    .sort()
+
+describe('locales', () => {
+  const source = resources[defaultLanguage]
+
+  it(\`has catalogs for the default language, \${defaultLanguage}\`, () => {
+    expect(source).toBeDefined()
+  })
+
+  const others = Object.keys(resources).filter((language) => language !== defaultLanguage)
+  it.each(others)(\`%s has the namespaces and keys \${defaultLanguage} has, and no more\`, (language) => {
+    expect(Object.keys(resources[language]).sort()).toEqual(Object.keys(source).sort())
+    for (const namespace of Object.keys(source)) {
+      expect(keys(resources[language][namespace] ?? {})).toEqual(keys(source[namespace]))
+    }
+  })
+})
+`,
+  'src/test/setup.ts': `import '@testing-library/jest-dom/vitest'
+import '@/i18n/config'
+
+window.scrollTo = () => {}
+`
+}
+
+const appConfigFiles = (repo) => ({
+  'tsconfig.json': `{
+  "files": [],
+  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
+  "compilerOptions": {
+    "paths": { "@/*": ["./src/*"] }
+  }
+}
+`,
+  'tsconfig.app.json': `{
+  "extends": "${repo}/.devtools/vite/tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "vitest/globals"],
+    "jsx": "react-jsx",
+    "paths": { "@/*": ["./src/*"] }
+  },
+  "include": ["src"]
+}
+`,
+  'tsconfig.node.json': `{
+  "extends": "${repo}/.devtools/vite/tsconfig.base.json",
+  "compilerOptions": {
+    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
+    "lib": ["ES2023"],
+    "types": ["node"]
+  },
+  "include": ["vite.config.ts", "vitest.config.ts", "${join(repo, '.devtools/vite/*.ts')}", "${join(repo, '.devtools/host/*.ts')}"]
+}
+`,
+  'vite.config.ts': `import { defineConfig } from 'vite'
+
+import { app } from '${repo}/.devtools/vite/vite.ts'
+import { site } from './src/config/site.ts'
+
+export default defineConfig(await app({ site }))
+`,
+  'vitest.config.ts': `import { defineConfig } from 'vitest/config'
+
+import { projects } from '${repo}/.devtools/vite/vitest.ts'
+
+export default defineConfig({
+  test: { projects: await projects() }
+})
+`,
+
+  'eslint.config.js': eslintConfig(repo, 'app')
+})
+
+const siteFiles = ({ slug, name, description }) => ({
+  'src/config/site.ts': `export const site = {
+  name: '${quote(name)}',
+  title: '${quote(name)}',
+  description: '${quote(description)}',
+  url: 'https://${slug}.example.com',
+  ogImage: '/og.png',
+  themeColor: '#ffffff',
+  locale: 'en_US'
+} as const
+`,
+  'src/locales/en/common.json': `${JSON.stringify(
+    { home: { title: 'Welcome to {{name}}', description } },
+    null,
+    2
+  )}\n`
+})
+
+function repoFiles(slug) {
+  const manifests = workspace
+    ? {
+        [join(appDir, 'package.json')]: manifest(`${slug}-${kebab(basename(appDir))}`, appScripts),
+        'package.json': manifest(slug, repoScripts),
+        'eslint.config.js': eslintConfig('.', 'base')
+      }
+    : { 'package.json': manifest(slug, { ...appScripts, ...repoScripts }) }
+
+  return {
+    ...manifests,
+    '.prettierignore': `# Generated, or vendored: shadcn/ui keeps its upstream formatting so updates diff cleanly.
+${join(appDir, 'src/routeTree.gen.ts')}
+${join(appDir, 'src/components/ui/')}
+pnpm-lock.yaml
+`,
+    'knip.json': knipConfig(appDir),
+    'knip.json': knipConfig(appDir),
+    '.claude/launch.json': claudeLaunch
+  }
+}
+
 const generators = {
   route([path], { feature }) {
     if (!path) die(say.usageRoute)
@@ -362,7 +755,6 @@ describe('use${P}', () => {
       die(say.noWorkspace(appDir))
     }
     const { slug, name, description, nodeMajor, repo } = project()
-    const quote = (text) => text.replaceAll('\\', '\\\\').replaceAll("'", "\\'")
     const host = (await hostScaffold()) ?? {
       files: {},
       repoFiles: {},
@@ -371,395 +763,24 @@ describe('use${P}', () => {
       next: []
     }
 
-    const manifest = (packageName, scripts) =>
-      `${JSON.stringify({ name: packageName, private: true, type: 'module', scripts }, null, 2)}\n`
-    const appScripts = {
-      dev: 'vite',
-      build: 'vite build',
-      preview: 'vite preview',
-      test: 'vitest',
-      typecheck: 'tsc -b'
-    }
-    const repoScripts = {
-      lint: 'eslint --max-warnings=0 .',
-      format: "prettier --write '**/*.{js,mjs,cjs,jsx,ts,tsx,css,html}'",
-      gen: 'node .devtools/scripts/gen.mjs'
-    }
-    const knipApp = {
-      entry: ['src/lib/utils.ts'],
-      ignore: ['src/components/ui/**'],
-      ignoreDependencies: ['shadcn', 'zod']
-    }
-    const knipConfig = (dir) => {
-      const shared = { $schema: 'https://unpkg.com/knip@6/schema.json' }
-      const config =
-        dir === '.'
-          ? { ...shared, ...knipApp, ignore: ['.devtools/**', ...knipApp.ignore] }
-          : { ...shared, ignore: ['.devtools/**'], workspaces: { [dir]: knipApp } }
-      return `${JSON.stringify(config, null, 2)}\n`
-    }
-    const eslintConfig = (path, rules) => `import { defineConfig } from 'eslint/config'
-
-import { ${rules} } from '${path}/.devtools/vite/eslint.js'
-
-export default defineConfig([${rules}])
-`
-    const manifests = workspace
-      ? {
-          [join(appDir, 'package.json')]: manifest(
-            `${slug}-${kebab(basename(appDir))}`,
-            appScripts
-          ),
-          'package.json': manifest(slug, repoScripts),
-          'eslint.config.js': eslintConfig('.', 'base')
-        }
-      : { 'package.json': manifest(slug, { ...appScripts, ...repoScripts }) }
-
     const written = emit(
       {
         ...host.files,
-        'tsconfig.json': `{
-  "files": [],
-  "references": [{ "path": "./tsconfig.app.json" }, { "path": "./tsconfig.node.json" }],
-  "compilerOptions": {
-    "paths": { "@/*": ["./src/*"] }
-  }
-}
-`,
-        'tsconfig.app.json': `{
-  "extends": "${repo}/.devtools/vite/tsconfig.base.json",
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.app.tsbuildinfo",
-    "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "types": ["vite/client", "vitest/globals"],
-    "jsx": "react-jsx",
-    "paths": { "@/*": ["./src/*"] }
-  },
-  "include": ["src"]
-}
-`,
-        'tsconfig.node.json': `{
-  "extends": "${repo}/.devtools/vite/tsconfig.base.json",
-  "compilerOptions": {
-    "tsBuildInfoFile": "./node_modules/.tmp/tsconfig.node.tsbuildinfo",
-    "lib": ["ES2023"],
-    "types": ["node"]
-  },
-  "include": ["vite.config.ts", "vitest.config.ts", "${join(repo, '.devtools/vite/*.ts')}", "${join(repo, '.devtools/host/*.ts')}"]
-}
-`,
-        'vite.config.ts': `import { defineConfig } from 'vite'
-
-import { app } from '${repo}/.devtools/vite/vite.ts'
-import { site } from './src/config/site.ts'
-
-export default defineConfig(await app({ site }))
-`,
-        'vitest.config.ts': `import { defineConfig } from 'vitest/config'
-
-import { projects } from '${repo}/.devtools/vite/vitest.ts'
-
-export default defineConfig({
-  test: { projects: await projects() }
-})
-`,
-        'eslint.config.js': eslintConfig(repo, 'app'),
-        'index.html': `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="%APP_THEME_COLOR%" />
-    <title>%APP_TITLE%</title>
-    <meta name="description" content="%APP_DESCRIPTION%" />
-    <link rel="canonical" href="%APP_URL%" />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="%APP_NAME%" />
-    <meta property="og:title" content="%APP_TITLE%" />
-    <meta property="og:description" content="%APP_DESCRIPTION%" />
-    <meta property="og:url" content="%APP_URL%" />
-    <meta property="og:image" content="%APP_OG_IMAGE%" />
-    <meta property="og:locale" content="%APP_LOCALE%" />
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
-  </body>
-</html>
-`,
-        'src/config/site.ts': `export const site = {
-  name: '${quote(name)}',
-  title: '${quote(name)}',
-  description: '${quote(description)}',
-  url: 'https://${slug}.example.com',
-  ogImage: '/og.png',
-  themeColor: '#ffffff',
-  locale: 'en_US'
-} as const
-`,
-        'src/index.css': `@import 'tailwindcss';
-`,
-        'src/lib/utils.ts': `import { clsx, type ClassValue } from 'clsx'
-import { twMerge } from 'tailwind-merge'
-
-export function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs))
-}
-`,
-        'src/router.ts': `import type { QueryClient } from '@tanstack/react-query'
-import { createRouter, type RouterHistory } from '@tanstack/react-router'
-
-import { routeTree } from './routeTree.gen'
-
-export function createAppRouter(queryClient: QueryClient, history?: RouterHistory) {
-  return createRouter({
-    routeTree,
-    history,
-    context: { queryClient },
-    defaultPreload: 'intent',
-    defaultPreloadStaleTime: 0,
-    scrollRestoration: true
-  })
-}
-
-declare module '@tanstack/react-router' {
-  interface Register {
-    router: ReturnType<typeof createAppRouter>
-  }
-}
-`,
-        'src/router.test.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createMemoryHistory, RouterProvider } from '@tanstack/react-router'
-import { render, screen } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
-
-import { createAppRouter } from './router'
-
-describe('router', () => {
-  it('renders the home page at /', async () => {
-    const queryClient = new QueryClient()
-    const router = createAppRouter(queryClient, createMemoryHistory({ initialEntries: ['/'] }))
-    render(
-      <QueryClientProvider client={queryClient}>
-        <RouterProvider router={router} />
-      </QueryClientProvider>
-    )
-    expect(await screen.findByRole('heading', { level: 1 })).toBeInTheDocument()
-  })
-})
-`,
-        'src/main.tsx': `import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { RouterProvider } from '@tanstack/react-router'
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-
-import './i18n/config'
-import { createAppRouter } from './router'
-import './index.css'
-
-const queryClient = new QueryClient()
-const router = createAppRouter(queryClient)
-
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <QueryClientProvider client={queryClient}>
-      <RouterProvider router={router} />
-    </QueryClientProvider>
-  </StrictMode>
-)
-`,
-        'src/routes/__root.tsx': `import type { QueryClient } from '@tanstack/react-query'
-import { createRootRouteWithContext, Outlet } from '@tanstack/react-router'
-
-export interface RouterContext {
-  queryClient: QueryClient
-}
-
-export const Route = createRootRouteWithContext<RouterContext>()({
-  component: RootLayout
-})
-
-function RootLayout() {
-  return <Outlet />
-}
-`,
-        'src/routes/index.tsx': `import { createFileRoute } from '@tanstack/react-router'
-import { useTranslation } from 'react-i18next'
-
-import { site } from '@/config/site'
-
-export const Route = createFileRoute('/')({
-  component: HomeRoute
-})
-
-function HomeRoute() {
-  const { t } = useTranslation()
-  return (
-    <main className="mx-auto max-w-2xl p-8">
-      <h1 className="text-3xl font-semibold">{t('home.title', { name: site.name })}</h1>
-      <p className="mt-2 text-neutral-600">{t('home.description')}</p>
-    </main>
-  )
-}
-`,
-        'src/i18n/config.ts': `import i18n from 'i18next'
-import LanguageDetector from 'i18next-browser-languagedetector'
-import { initReactI18next } from 'react-i18next'
-
-import { site } from '@/config/site'
-
-type Catalog = Record<string, unknown>
-
-const catalogs = import.meta.glob('../locales/*/*.json', {
-  eager: true,
-  import: 'default'
-}) as Record<string, Catalog>
-
-export const resources: Record<string, Record<string, Catalog>> = {}
-for (const [path, catalog] of Object.entries(catalogs)) {
-  const [language, file] = path.split('/').slice(-2)
-  resources[language] = { ...resources[language], [file.replace(/\\.json$/, '')]: catalog }
-}
-
-export const defaultLanguage = site.locale.split('_')[0]
-
-void i18n
-  .use(LanguageDetector)
-  .use(initReactI18next)
-  .init({
-    resources,
-    fallbackLng: defaultLanguage,
-    supportedLngs: Object.keys(resources),
-    defaultNS: 'common',
-    interpolation: { escapeValue: false },
-    initAsync: false,
-    detection: { order: ['querystring', 'localStorage', 'navigator'], caches: ['localStorage'] },
-    saveMissing: import.meta.env.DEV,
-    missingKeyHandler: (_languages, namespace, key) => {
-      const message = \`i18n: no string for \${namespace}:\${key}\`
-      if (import.meta.env.MODE === 'test') throw new Error(message)
-      console.warn(message)
-    }
-  })
-
-const setLang = (language: string) => (document.documentElement.lang = language)
-setLang(i18n.resolvedLanguage ?? defaultLanguage)
-i18n.on('languageChanged', setLang)
-`,
-        'src/i18n/locales.test.ts': `import { describe, expect, it } from 'vitest'
-
-import { defaultLanguage, resources } from './config'
-
-const keys = (catalog: object, prefix = ''): string[] =>
-  Object.entries(catalog)
-    .flatMap(([key, value]) =>
-      value && typeof value === 'object' ? keys(value, \`\${prefix}\${key}.\`) : [\`\${prefix}\${key}\`]
-    )
-    .sort()
-
-describe('locales', () => {
-  const source = resources[defaultLanguage]
-
-  it(\`has catalogs for the default language, \${defaultLanguage}\`, () => {
-    expect(source).toBeDefined()
-  })
-
-  const others = Object.keys(resources).filter((language) => language !== defaultLanguage)
-  it.each(others)(\`%s has the namespaces and keys \${defaultLanguage} has, and no more\`, (language) => {
-    expect(Object.keys(resources[language]).sort()).toEqual(Object.keys(source).sort())
-    for (const namespace of Object.keys(source)) {
-      expect(keys(resources[language][namespace] ?? {})).toEqual(keys(source[namespace]))
-    }
-  })
-})
-`,
-        'src/locales/en/common.json': `${JSON.stringify(
-          { home: { title: 'Welcome to {{name}}', description } },
-          null,
-          2
-        )}\n`,
-        'src/test/setup.ts': `import '@testing-library/jest-dom/vitest'
-import '@/i18n/config'
-
-window.scrollTo = () => {}
-`
+        ...appConfigFiles(repo),
+        ...siteFiles({ slug, name, description }),
+        ...appSource
       },
-      {
-        ...host.repoFiles,
-        ...manifests,
-        '.prettierignore': `# Generated, or vendored: shadcn/ui keeps its upstream formatting so updates diff cleanly.
-${join(appDir, 'src/routeTree.gen.ts')}
-${join(appDir, 'src/components/ui/')}
-pnpm-lock.yaml
-`,
-        'knip.json': knipConfig(appDir),
-        '.claude/launch.json': `{
-  "version": "0.0.1",
-  "configurations": [
-    {
-      "name": "dev",
-      "runtimeExecutable": "make",
-      "runtimeArgs": ["-C", ".devtools", "dev"],
-      "port": 5173
-    }
-  ]
-}
-`
-      }
+      { ...host.repoFiles, ...repoFiles(slug) }
     )
 
     if (!installing) {
       next(genNext.appNoInstall(appDir))
       return
     }
-    install(
-      [
-        'react',
-        'react-dom',
-        '@tanstack/react-router',
-        '@tanstack/react-query',
-        'zod',
-        'clsx',
-        'tailwind-merge',
-        'i18next',
-        'react-i18next',
-        'i18next-browser-languagedetector',
-        ...host.dependencies
-      ],
-      [
-        '@types/react',
-        '@types/react-dom',
-        '@testing-library/react',
-        '@testing-library/dom',
-        '@testing-library/jest-dom',
-        'shadcn',
-        'tailwindcss'
-      ],
-      [
-        'vite',
-        '@vitejs/plugin-react',
-        '@tanstack/router-plugin',
-        'tailwindcss',
-        '@tailwindcss/vite',
-        'typescript@~6.0.3',
-        `@types/node@^${nodeMajor}`,
-        'vitest',
-        'jsdom',
-        'eslint',
-        '@eslint/js',
-        'typescript-eslint',
-        'globals',
-        'eslint-plugin-react-hooks',
-        'eslint-plugin-react-refresh',
-        'eslint-plugin-jsx-a11y',
-        '@tanstack/eslint-plugin-query',
-        '@tanstack/eslint-plugin-router',
-        'eslint-plugin-i18next',
-        'prettier',
-        'knip',
-        ...host.devDependencies
-      ]
-    )
+    install([...appDependencies, ...host.dependencies], appDevDependencies, [
+      ...toolDependencies(nodeMajor),
+      ...host.devDependencies
+    ])
     run('pnpm', ['exec', 'vite', 'build'])
     format(written)
     next(genNext.check, genNext.shadcn(appDir), genNext.commit, ...host.next)
