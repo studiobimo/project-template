@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.1](https://github.com/studiobimo/project-template/compare/v0.11.0...v0.11.1) (2026-11-08)
+
+
+### Bug Fixes
+
+* **devtools:** deploy from Workers Builds, which has no mise ([#77](https://github.com/studiobimo/project-template/issues/77)) ([b20e621](https://github.com/studiobimo/project-template/commit/b20e6213246a3c5486a808d45cfda948272df107))
+
 ## [0.11.0](https://github.com/studiobimo/project-template/compare/v0.10.0...v0.11.0) (2026-11-08)
 
 
