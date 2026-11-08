@@ -231,6 +231,32 @@ listed_envs() { [[ "$(production deploy-envs)" == production ]]; }
 usage_of_deploy() { local out; out="$(production deploy ENV=development 2>&1)" || true; [[ "${out}" == *"ENV=production"$'\n'* ]]; }
 expect 0 "listing production for deploy.yml" listed_envs
 expect 0 "with a usage that names only production" usage_of_deploy
+mkdir -p "${work}/image"
+printf '#!/bin/sh\necho "$%s"\n' IMAGE_NODE >"${work}/image/node"
+printf '#!/bin/sh\necho "$%s"\n' IMAGE_PNPM >"${work}/image/pnpm"
+chmod +x "${work}/image/node" "${work}/image/pnpm"
+# image [VAR=value ...] <make args>: make as a build image with no mise runs it.
+image() {
+    local vars=()
+    while [[ "$1" == *=* ]]; do vars+=("$1"); shift; done
+    env -u GITHUB_REF_NAME PATH="${work}/image:${PATH}" ${vars[@]+"${vars[@]}"} \
+        make -s -C "${vite}/.devtools" -f production.mk MISE=no-mise "$@"
+}
+pinned() { sed -n "s/^$1 = \"\(.*\)\"/\1/p" "${vite}/mise.toml"; }
+runs_from_path() { local out; out="$(image -n build-app)"; [[ "${out}" == *"pnpm exec vite build"* && "${out}" != *"mise"* ]]; }
+expect 0 "without mise, make runs the tools on the PATH" runs_from_path
+expect 2 "and will not deploy with a node other than mise.toml's" \
+    image IMAGE_NODE=1.0.0 IMAGE_PNPM="$(pinned pnpm)" deploy-tools
+expect 2 "or a pnpm other than its" image IMAGE_NODE="$(pinned node)" IMAGE_PNPM=1.0.0 deploy-tools
+expect 0 "but deploys with the ones it pins" \
+    image IMAGE_NODE="$(pinned node)" IMAGE_PNPM="$(pinned pnpm)" deploy-tools
+expect 0 "with mise, the image's versions are not checked" \
+    env IMAGE_NODE=1.0.0 PATH="${work}/image:${PATH}" make -s -C "${vite}/.devtools" -f production.mk deploy-tools
+git -C "${vite}" checkout --quiet --detach
+expect 0 "a detached Workers Builds checkout ships from the branch it names" \
+    image WORKERS_CI_BRANCH=main deploy-branch ENV=production
+expect 2 "and only that branch" image WORKERS_CI_BRANCH=feat/thing deploy-branch ENV=production
+git -C "${vite}" checkout --quiet main
 rm -r "${vite}/.devtools/host" "${vite}/.devtools/production.mk"
 cp -R "${work}/profile-gcp/.devtools/host" "${vite}/.devtools/"
 expect 0 "writes another hosting profile's files" gen host --no-install

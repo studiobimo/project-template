@@ -4,7 +4,7 @@
 # there is one: it adds deploy targets, more tsc projects and its own checks, and may move
 # BUNDLE_DIR, since a host's plugin can put the client build somewhere else.
 
-PNPM := cd $(ROOT) && $(MISE) exec -- pnpm
+PNPM := cd $(ROOT) && $(MISE_EXEC) pnpm
 
 # The app's directory, from the repository's root. A workspace sets APP_DIR in Makefile, above
 # the line that includes this file, or lists every app in APPS when it has more than one. These
@@ -18,7 +18,7 @@ APPS ?=
 APP_DIR ?= $(or $(APP),$(firstword $(APPS)),.)
 APP_LIST = $(or $(APP),$(APPS),$(APP_DIR))
 APP_CD = cd $(ROOT)/$(APP_DIR)
-APP_PNPM = $(APP_CD) && $(MISE) exec -- pnpm
+APP_PNPM = $(APP_CD) && $(MISE_EXEC) pnpm
 each-app = @for app in $(APP_LIST); do $(MAKE) --no-print-directory APP_DIR="$${app}" $(1) || exit 1; done
 
 # The bundle budget. Raise a number in the project's Makefile, in the same pull request as
@@ -63,11 +63,11 @@ MSG_DEPLOY_USAGE = $(GLYPH_FAIL) usage: $(DEVTOOLS) deploy ENV=$(deploy-env-patt
 deploy-envs:
 	@echo $(DEPLOY_ENVS)
 
-# A run from Actions has GITHUB_REF_NAME, the branch it started on: a checkout of a push is
-# detached, so git would name no branch there.
+# A checkout of a push is detached, so git names no branch there. A run from Actions has the
+# branch it started on in GITHUB_REF_NAME, and one from Workers Builds in WORKERS_CI_BRANCH.
 deploy-branch:
 	$(require-deploy-env)
-	@branch=$${GITHUB_REF_NAME:-$$(git branch --show-current)}; \
+	@branch=$${GITHUB_REF_NAME:-$${WORKERS_CI_BRANCH:-$$(git branch --show-current)}}; \
 	[ "$$branch" = "$(DEPLOY_BRANCH_$(ENV))" ] || { \
 		echo "$(GLYPH_FAIL) $(ENV) ships from $(DEPLOY_BRANCH_$(ENV)), not $$branch" >&2; \
 		exit 1; }
@@ -87,7 +87,7 @@ build: ## Production build of every app; fails if it had to rewrite a stale src/
 
 build-app:
 	@$(APP_CD) && before="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
-		&& $(MISE) exec -- pnpm exec vite build \
+		&& $(MISE_EXEC) pnpm exec vite build \
 		&& after="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
 		&& if [ "$${before}" != "$${after}" ]; then \
 			echo "$(MSG_ROUTES_STALE)" >&2; exit 1; \
@@ -123,7 +123,7 @@ budget: ## Fail if a client chunk or the whole bundle of any app outgrows its bu
 	$(call each-app,budget-app)
 
 budget-app:
-	$(APP_CD) && $(MISE) exec -- node $(ROOT)/.devtools/scripts/bundle-budget.mjs \
+	$(APP_CD) && $(MISE_EXEC) node $(ROOT)/.devtools/scripts/bundle-budget.mjs \
 		--dir $(call per-app,BUNDLE_DIR) --chunk-kib $(call per-app,BUNDLE_CHUNK_KIB) \
 		--total-kib $(call per-app,BUNDLE_TOTAL_KIB)
 
