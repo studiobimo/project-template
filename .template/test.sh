@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# `make ci` runs this file, and GNU make 4 exports -w through MAKEFLAGS when it was started
+# with -C. Every make below would then print "Entering directory" around its output, which
+# the cases that compare output exactly cannot allow. Run as if from a plain shell.
+unset MAKEFLAGS MFLAGS MAKELEVEL
+
 template="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # The names and placeholders the scripts use, so a test never spells one differently.
 # shellcheck source=.devtools/scripts/strings.sh
