@@ -372,6 +372,10 @@ for tool in vitest tsc; do
     cat >"${stubs}/${tool}" <<'EOF'
 #!/bin/sh
 echo "${0##*/}" "$@" >>"$CALLS"
+case "$*" in
+    "--showConfig -p tsconfig.json") echo '{"references":[{"path":"./tsconfig.app.json"},{"path":"./worker"}]}' ;;
+    --showConfig*) echo '{}' ;;
+esac
 EOF
     chmod +x "${stubs}/${tool}"
 done
@@ -383,6 +387,8 @@ check() { # <directory> <task> [app...]
     (cd "${dir}" && PATH="${stubs}:${PATH}" mise exec -- node "${shop}/.devtools/scripts/packages.mjs" "$@")
 }
 ran() { grep -q -- "$1" "${CALLS}"; }
+not_ran() { ! grep -q -- "$1" "${CALLS}"; }
+narrowed() { AFFECTED_REF=origin/develop "$@"; }
 ran_nothing() { ! [[ -s "${CALLS}" ]]; }
 mkdir -p "${shop}/packages/ui/src" "${shop}/packages/data/src" "${shop}/packages/docs"
 touch "${shop}/packages/data/vitest.config.ts" "${shop}/packages/data/tsconfig.json" \
@@ -396,7 +402,19 @@ expect 0 "alone" ran '^vitest run$'
 expect 0 "a package with no src/ is left alone" check packages/docs test
 expect 0 "and runs nothing" ran_nothing
 expect 0 "a package with a tsconfig.json is type-checked" check packages/ui typecheck apps/web
-expect 0 "by tsc -b" ran '^tsc -b$'
+expect 0 "by an incremental tsc on its own config" ran '^tsc -p tsconfig.json --noEmit --incremental$'
+expect 0 "a package's tests run in full without a base" check packages/data test
+expect 0 "and are not narrowed" not_ran --changed
+expect 0 "a package's tests are narrowed to the base affected.sh printed" narrowed check packages/data test
+expect 0 "on its own config, passing when no test is related" \
+    ran '^vitest run --changed origin/develop --passWithNoTests$'
+expect 0 "and on the shared default" narrowed check packages/ui test
+expect 0 "with the same flags" ran 'vitest run --config .* --passWithNoTests --changed origin/develop$'
+expect 0 "an app's tsc projects expand to the configs they reference, each once" \
+    check apps/web tsc . worker
+expect 0 "incrementally" ran '^tsc -p tsconfig.app.json --noEmit --incremental$'
+expect 0 "even when two projects reach the same config" test "$(grep -c '^tsc -p worker/tsconfig.json' "${CALLS}")" = 1
+expect 0 "and the Worker's own" ran '^tsc -p worker/tsconfig.json --noEmit --incremental$'
 rm "${shop}/packages/ui/tsconfig.json"
 expect 1 "a package with a src/ and no tsconfig.json fails" check packages/ui typecheck apps/web
 expect 0 "an app is left to typecheck-app" check apps/web typecheck apps/web
@@ -418,6 +436,59 @@ expect 0 "with one package.json" grep -qF '"gen": "node .devtools/scripts/gen.mj
 expect 0 "the configs as they were" grep -qF 'defineConfig([app])' "${flat}/eslint.config.js"
 expect 0 "and the paths" grep -qF "'./.devtools/vite/vite.ts'" "${flat}/vite.config.ts"
 expect 0 "Worker's included" grep -qF '"../.devtools/vite/tsconfig.base.json"' "${flat}/worker/tsconfig.json"
+
+echo "vite-react-tanstack narrowed CI"
+aff="${work}/affected"
+affected_script="${shop}/.devtools/scripts/affected.sh"
+git init --quiet --initial-branch=main "${aff}"
+mkdir -p "${aff}/src/features"
+echo 'export const a = 1' >"${aff}/src/features/a.ts"
+git -C "${aff}" add -A
+git -C "${aff}" commit --quiet -m 'chore: base'
+git -C "${aff}" switch --quiet -c feat/change
+echo 'export const a = 2' >"${aff}/src/features/a.ts"
+git -C "${aff}" commit --quiet -am 'feat: change a source file'
+affected() { (cd "${aff}" && env AFFECTED_BASE="$1" sh "${affected_script}") }
+prints() { local want="$1" got; shift; got="$("$@")" && [[ "${got}" == "${want}" ]]; }
+expect 0 "affected.sh is executable" test -x "${affected_script}"
+expect 0 "prints the base for a change to source alone" prints main affected main
+expect 0 "prints nothing without a base, so everything runs" prints '' affected ''
+expect 0 "or when the base is no commit" prints '' affected origin/nope
+expect 0 "or outside a git checkout" prints '' env -C "${work}" AFFECTED_BASE=main sh "${affected_script}"
+for changed in pnpm-lock.yaml package.json packages/ui/package.json pnpm-workspace.yaml mise.toml mise.lock \
+    .devtools/Makefile tsconfig.json apps/web/tsconfig.app.json vite.config.ts vitest.config.ts \
+    vitest.workspace.ts eslint.config.js knip.json .jscpd.json wrangler.jsonc src/test/setup.ts \
+    apps/web/src/test/setup.tsx; do
+    mkdir -p "$(dirname "${aff}/${changed}")"
+    echo "// ${changed}" >"${aff}/${changed}"
+    git -C "${aff}" add -A
+    git -C "${aff}" commit --quiet -m "chore: touch ${changed}"
+    expect 0 "prints nothing once ${changed} changed" prints '' affected main
+    git -C "${aff}" reset --quiet --hard HEAD~1
+done
+expect 0 "prints the base again once those are gone" prints main affected main
+echo '{}' >"${aff}/package.json"
+expect 0 "an uncommitted change to a tracked file is read as well" prints main affected main
+git -C "${aff}" add package.json
+git -C "${aff}" commit --quiet -m 'chore: add package.json'
+git -C "${aff}" reset --quiet --hard HEAD~1
+echo '// edit' >>"${aff}/src/features/a.ts"
+git -C "${aff}" checkout --quiet -- .
+
+full_ci() { make -n --no-print-directory -C "${shop}/.devtools" -f "$1" ci "${@:2}"; }
+printf 'include base.mk\ninclude vite.mk\nFULL_CI_TARGETS += e2e budget-memory\ne2e budget-memory:\n\t@echo $@\n' \
+    >"${shop}/.devtools/full.mk"
+printf 'include base.mk\ninclude vite.mk\n' >"${shop}/.devtools/plain.mk"
+full_ci_ran_browser_suites() { full_ci full.mk "$@" | grep -qE 'make --no-print-directory +e2e budget-memory'; }
+full_ci_skipped_them() { full_ci full.mk "$@" | grep -q 'skipped e2e budget-memory'; }
+nothing_to_skip() { ! full_ci plain.mk "$@" | grep -qE 'skipped|--no-print-directory +e2e'; }
+expect 0 "make ci runs the browser suites when neither variable is set" full_ci_ran_browser_suites
+expect 0 "and when CI_FULL=true" full_ci_ran_browser_suites CI_FULL=true
+expect 0 "and skips them, saying so, when CI_FULL=false" full_ci_skipped_them CI_FULL=false
+expect 1 "without running them" bash -c "$(declare -f full_ci full_ci_ran_browser_suites); shop='${shop}'; full_ci_ran_browser_suites CI_FULL=false"
+expect 0 "a project with none has nothing to skip" nothing_to_skip CI_FULL=false
+rm "${shop}/.devtools/plain.mk"
+rm "${shop}/.devtools/full.mk"
 
 echo "vite-react-tanstack shadcn MCP server"
 mkdir -p "${stubs}/pnpm-bin"
