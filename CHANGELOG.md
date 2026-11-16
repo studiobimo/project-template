@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.0](https://github.com/studiobimo/project-template/compare/v0.13.0...v0.14.0) (2026-11-16)
+
+
+### Features
+
+* **ci:** move to the org's ci-project and ci-pr-events workflows ([#91](https://github.com/studiobimo/project-template/issues/91)) ([456ed1b](https://github.com/studiobimo/project-template/commit/456ed1b5a36ca0402e6e2a45e64e026ba0edc630))
+
 ## [0.13.0](https://github.com/studiobimo/project-template/compare/v0.12.0...v0.13.0) (2026-11-16)
 
 
