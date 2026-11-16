@@ -53,6 +53,9 @@ run-full-ci-targets = $(if $(strip $(FULL_CI_TARGETS)),$(if $(filter false,$(CI_
 # Content caches keep a repeated run to the files that changed. They live in node_modules, so
 # git ignores them and `pnpm install` leaves them alone.
 CACHE_DIR := node_modules/.cache
+# Prettier's cache is a file, and its own default is this file in a directory of its own: a
+# hook's plain `prettier --cache` reads it there, so the Makefile must not make the directory a file.
+PRETTIER_CACHE := $(CACHE_DIR)/prettier/.prettier-cache
 
 # The checks every workspace package gets, by what it has: scripts/packages.mjs runs in each
 # one. They tell the apps from the other packages by ALL_APPS, which APP does not narrow.
@@ -133,11 +136,11 @@ knip: ## Fail on unused files, exports and dependencies
 	$(PNPM) exec knip
 
 fmt: ## Format the web sources with Prettier
-	$(PNPM) exec prettier --write --cache --cache-strategy content --cache-location $(CACHE_DIR)/prettier \
+	$(PNPM) exec prettier --write --cache --cache-strategy content --cache-location $(PRETTIER_CACHE) \
 		--log-level=warn $(PRETTIER_FILES)
 
 fmt-check: ## Fail on web sources Prettier would change
-	$(PNPM) exec prettier --check --cache --cache-strategy content --cache-location $(CACHE_DIR)/prettier \
+	$(PNPM) exec prettier --check --cache --cache-strategy content --cache-location $(PRETTIER_CACHE) \
 		--log-level=warn $(PRETTIER_FILES)
 
 budget: ## Fail if a client chunk or the whole bundle of any app outgrows its budget (after build)

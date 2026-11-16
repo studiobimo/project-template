@@ -502,6 +502,10 @@ expect 0 "and when CI_FULL=true" full_ci_ran_browser_suites CI_FULL=true
 expect 0 "and skips them, saying so, when CI_FULL=false" full_ci_skipped_them CI_FULL=false
 expect 1 "without running them" bash -c "$(declare -f full_ci full_ci_ran_browser_suites); shop='${shop}'; full_ci_ran_browser_suites CI_FULL=false"
 expect 0 "a project with none has nothing to skip" nothing_to_skip CI_FULL=false
+prettier_cache_at_its_default() {
+    [[ "$(make -n --no-print-directory -C "${shop}/.devtools" -f plain.mk fmt fmt-check | grep -c -- '--cache-location node_modules/\.cache/prettier/\.prettier-cache')" == 2 ]]
+}
+expect 0 "prettier's cache is the file its own default names, inside its own directory" prettier_cache_at_its_default
 rm "${shop}/.devtools/plain.mk"
 rm "${shop}/.devtools/full.mk"
 
