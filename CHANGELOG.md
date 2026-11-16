@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.12.0](https://github.com/studiobimo/project-template/compare/v0.11.4...v0.12.0) (2026-11-16)
+
+
+### Features
+
+* register the shadcn mcp server for claude code and codex in vite projects ([#87](https://github.com/studiobimo/project-template/issues/87)) ([a923ccb](https://github.com/studiobimo/project-template/commit/a923ccb2e9d56063c717b655d7d7d719d7d98c83))
+
 ## [0.11.4](https://github.com/studiobimo/project-template/compare/v0.11.3...v0.11.4) (2026-11-16)
 
 
