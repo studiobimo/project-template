@@ -63,6 +63,16 @@ rm CLAUDE.md
 expect 1 "a missing managed file is drift" "${sync[@]}" --check
 expect 0 "sync recreates it" "${sync[@]}"
 
+printf 'model_context_window = 500000\nmodel_auto_compact_token_limit = 500000\n' >.codex/config.toml
+expect 1 "a file from before its block had markers is drift" "${sync[@]}" --check
+expect 0 "sync wraps it in the block" "${sync[@]}"
+expect 0 "without a second copy of its settings" test "$(grep -c '^model_context_window' .codex/config.toml)" = 1
+expect 0 "and it is in step" "${sync[@]}" --check
+printf 'model_context_window = 1\n' >.codex/config.toml
+expect 0 "a file that differs gets the block appended" "${sync[@]}"
+expect 0 "after the project's own line" grep -qx 'model_context_window = 1' .codex/config.toml
+git checkout --quiet -- .codex/config.toml
+
 printf '\n# Project\nbuild/\n' >>.gitignore
 expect 0 "edits outside a block are the project's" "${sync[@]}" --check
 sed -i.bak 's/^Thumbs\.db$/Thumbs.db.edited/' .gitignore && rm .gitignore.bak
@@ -408,6 +418,29 @@ expect 0 "with one package.json" grep -qF '"gen": "node .devtools/scripts/gen.mj
 expect 0 "the configs as they were" grep -qF 'defineConfig([app])' "${flat}/eslint.config.js"
 expect 0 "and the paths" grep -qF "'./.devtools/vite/vite.ts'" "${flat}/vite.config.ts"
 expect 0 "Worker's included" grep -qF '"../.devtools/vite/tsconfig.base.json"' "${flat}/worker/tsconfig.json"
+
+echo "vite-react-tanstack shadcn MCP server"
+mkdir -p "${stubs}/pnpm-bin"
+cat >"${stubs}/pnpm-bin/pnpm" <<'STUB'
+#!/bin/sh
+echo "$(pwd -P) $*" >>"$CALLS"
+STUB
+chmod +x "${stubs}/pnpm-bin/pnpm"
+launch() { (cd "$1" && PATH="${stubs}/pnpm-bin:${PATH}" mise exec -- node .devtools/scripts/shadcn-mcp.mjs); }
+shadcn_mcp_ran_in() {
+    : >"${CALLS}"
+    launch "$1" && grep -qxF "$(cd "$2" && pwd -P) exec shadcn mcp" "${CALLS}"
+}
+expect 0 "Claude Code runs the launcher" grep -qF '".devtools/scripts/shadcn-mcp.mjs"' "${shop}/.mcp.json"
+expect 0 "and Codex runs the same one" grep -qF 'args = [".devtools/scripts/shadcn-mcp.mjs"]' "${shop}/.codex/config.toml"
+expect 0 "beside the settings the base template keeps there" grep -qx 'model_context_window = 500000' "${shop}/.codex/config.toml"
+expect 0 "a workspace's server starts in APP_DIR" shadcn_mcp_ran_in "${shop}" "${shop}/apps/web"
+expect 0 "and a single app's at the root" shadcn_mcp_ran_in "${flat}" "${flat}"
+printf 'APPS := apps/web apps/site\n' >>"${flat}/.devtools/Makefile"
+mkdir -p "${flat}/apps/web"
+expect 0 "with APPS it starts in the first app" shadcn_mcp_ran_in "${flat}" "${flat}/apps/web"
+expect 1 "a project without the profile gets no .mcp.json" test -e "${work}/profile-cloudflare/.mcp.json"
+expect 1 "and no MCP server in its Codex config" grep -q 'mcp_servers' "${work}/profile-cloudflare/.codex/config.toml"
 
 run="${work}/run-shop"
 generated "${run}" gcp

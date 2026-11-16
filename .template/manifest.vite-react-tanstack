@@ -39,6 +39,9 @@ file  .devtools/scripts/gen.mjs
 file  .devtools/scripts/bundle-budget.mjs
 file  .prettierrc.json
 file  .github/workflows/ci.yml
+file  .mcp.json
+file  .devtools/scripts/app-dir.mjs
+file  .devtools/scripts/shadcn-mcp.mjs
 
 block mise.toml               vite
 block pnpm-workspace.yaml     vite
@@ -47,3 +50,4 @@ block .gitignore              vite
 block .editorconfig           vite
 block .github/dependabot.yml  vite
 block AGENTS.md               vite
+block .codex/config.toml      shadcn

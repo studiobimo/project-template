@@ -1,0 +1,5 @@
+# >>> template:shadcn
+[mcp_servers.shadcn]
+command = "node"
+args = [".devtools/scripts/shadcn-mcp.mjs"]
+# <<< template:shadcn

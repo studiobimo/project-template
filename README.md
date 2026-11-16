@@ -94,7 +94,8 @@ manages and what stays per project.
   TanStack Query and Tailwind: the shared Vite, Vitest, ESLint and TypeScript configs that the
   project's own config files extend, Prettier, the Makefile targets, hooks and CI, pnpm pinned
   in `mise.toml` with a week's release cooldown, a bundle budget, i18next with a lint rule
-  against inline strings, and the conventions in `AGENTS.md`. It does not choose a host.
+  against inline strings, the shadcn MCP server registered for Claude Code (`.mcp.json`) and
+  Codex (`.codex/config.toml`), and the conventions in `AGENTS.md`. It does not choose a host.
 
   Its generator, `.devtools/scripts/gen.mjs`, writes everything a new project needs around it
   and installs the packages; after that it writes routes, features, components and hooks:

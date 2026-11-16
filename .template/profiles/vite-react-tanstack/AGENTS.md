@@ -15,8 +15,9 @@ add only what is particular to it.
 - **Server state:** TanStack Query. **Forms:** TanStack Form. **Validation:** zod.
 - **Strings:** i18next with react-i18next, from catalogs in `src/locales/`.
 - **Styling:** Tailwind CSS v4, configured in `src/index.css`. Components: shadcn/ui in
-  `src/components/ui/`, added with `pnpm exec shadcn add <name>`: the CLI is a devDependency,
-  so the lockfile pins it like every other package (`pnpm add -D shadcn` in an older project).
+  `src/components/ui/`, added through the shadcn MCP server or, failing that, with
+  `pnpm exec shadcn add <name>`: the CLI is a devDependency, so the lockfile pins it like every
+  other package (`pnpm add -D shadcn` in an older project).
 - **Tests:** Vitest with Testing Library, next to the code as `*.test.ts(x)`.
 - **Packages:** pnpm, pinned in `mise.toml`. Never add `package-lock.json` or `yarn.lock`.
 - **Hosting** is another profile's job. Nothing in `src/` should know where the app runs:
@@ -108,6 +109,14 @@ export default mergeConfig(base, defineConfig({ test: { environment: 'node' } })
 
 ### Conventions
 
+- **shadcn MCP first.** `.mcp.json` (Claude Code) and `.codex/config.toml` (Codex) register the
+  shadcn MCP server, started by `.devtools/scripts/shadcn-mcp.mjs` in `APP_DIR`, so it finds
+  `components.json` in a workspace as in a single app. At the start of UI work, check that its
+  tools are loaded. Search, view and add registry items with them before writing a component
+  by hand. If they are not loaded, say so and fall back to the CLI from `APP_DIR`:
+  `pnpm exec shadcn search <registry> -q <term>`, `pnpm exec shadcn view <item>` and
+  `pnpm exec shadcn add <item>`. `src/components/ui/` is only ever added or regenerated with
+  shadcn, never hand-edited.
 - **Scaffold with the generator** rather than copying the nearest file: it writes code that
   is formatted, lint-clean and tested from the start. `pnpm gen` runs it too.
 
