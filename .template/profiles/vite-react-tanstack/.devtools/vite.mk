@@ -29,10 +29,30 @@ BUNDLE_DIR ?= dist
 BUNDLE_CHUNK_KIB ?= 450
 BUNDLE_TOTAL_KIB ?= 550
 
-# The tsc -b projects of an app, from APP_DIR: its tsconfig.json references the app's and the
+# The tsc projects of an app, from APP_DIR: its tsconfig.json references the app's and the
 # configs', and a hosting profile adds its own. Every other workspace package is found by its
-# src/ and checked on its own tsconfig.json.
+# src/ and checked on its own tsconfig.json. Each config a project references is checked by
+# `tsc -p <config> --noEmit --incremental`, which keeps a .tsbuildinfo under node_modules/.tmp/
+# (`tsc -b` is never incremental with noEmit), so only what changed is checked again.
 TSC_PROJECTS := .
+
+# The narrowing base: scripts/affected.sh prints a git ref when CI may run only the tests a pull
+# request affects, from AFFECTED_BASE (origin/<base>), and nothing when everything has to run.
+# CI_FULL=false is CI saying it narrowed. Neither is set on a laptop, so `make ci` runs it all.
+AFFECTED_SCRIPT := $(ROOT)/.devtools/scripts/affected.sh
+AFFECTED_REF = $$($(AFFECTED_SCRIPT))
+
+# End-to-end and other browser suites (Playwright, memory and first-load budgets). They cost
+# more than everything else together and a narrowed run cannot say which of them a change can
+# break, so `ci` runs them only when CI_FULL is not false. A project or host appends its own,
+# in Makefile after the include or in a host's .mk: FULL_CI_TARGETS += playwright-install e2e
+FULL_CI_TARGETS ?=
+MSG_FULL_CI_SKIPPED = $(GLYPH_OK) narrowed run (CI_FULL=false): skipped $(strip $(FULL_CI_TARGETS))
+run-full-ci-targets = $(if $(strip $(FULL_CI_TARGETS)),$(if $(filter false,$(CI_FULL)),@echo "$(MSG_FULL_CI_SKIPPED)",@$(MAKE) --no-print-directory $(FULL_CI_TARGETS)),@:)
+
+# Content caches keep a repeated run to the files that changed. They live in node_modules, so
+# git ignores them and `pnpm install` leaves them alone.
+CACHE_DIR := node_modules/.cache
 
 # The checks every workspace package gets, by what it has: scripts/packages.mjs runs in each
 # one. They tell the apps from the other packages by ALL_APPS, which APP does not narrow.
@@ -96,27 +116,29 @@ build-app:
 preview: build-app ## Serve the production build locally
 	$(APP_PNPM) exec vite preview
 
-test: ## Unit tests, once, in every package with a src/
-	$(PACKAGES) test
+test: ## Unit tests, once, in every package with a src/; only the affected ones when AFFECTED_BASE is set
+	@export AFFECTED_REF="$(AFFECTED_REF)"; $(PACKAGES) test
 
-typecheck: ## Type-check every app's tsconfig project references, and every other package's tsconfig.json
+typecheck: ## Type-check (incrementally) every app's tsconfig project references, and every other package's tsconfig.json
 	$(call each-app,typecheck-app)
 	$(PACKAGES) typecheck $(ALL_APPS)
 
 typecheck-app:
-	$(APP_PNPM) exec tsc -b $(TSC_PROJECTS)
+	$(APP_PNPM) exec node $(ROOT)/.devtools/scripts/packages.mjs tsc $(TSC_PROJECTS)
 
 eslint: ## ESLint over the whole tree, warnings included
-	$(PNPM) exec eslint --max-warnings=0 .
+	$(PNPM) exec eslint --cache --cache-strategy content --cache-location $(CACHE_DIR)/eslint/ --max-warnings=0 .
 
 knip: ## Fail on unused files, exports and dependencies
 	$(PNPM) exec knip
 
 fmt: ## Format the web sources with Prettier
-	$(PNPM) exec prettier --write --log-level=warn $(PRETTIER_FILES)
+	$(PNPM) exec prettier --write --cache --cache-strategy content --cache-location $(CACHE_DIR)/prettier \
+		--log-level=warn $(PRETTIER_FILES)
 
 fmt-check: ## Fail on web sources Prettier would change
-	$(PNPM) exec prettier --check --log-level=warn $(PRETTIER_FILES)
+	$(PNPM) exec prettier --check --cache --cache-strategy content --cache-location $(CACHE_DIR)/prettier \
+		--log-level=warn $(PRETTIER_FILES)
 
 budget: ## Fail if a client chunk or the whole bundle of any app outgrows its budget (after build)
 	$(PACKAGES) apps $(ALL_APPS)
@@ -139,7 +161,8 @@ playwright-install: ## Install the browser Playwright drives
 
 # Build before typecheck: a route added without running the dev server only exists in
 # the route tree once the build has written it.
-ci: install build typecheck eslint knip duplication fmt-check test budget audit ## What the CI workflow runs
+ci: install build typecheck eslint knip duplication fmt-check test budget audit ## What the CI workflow runs; the browser suites too unless CI_FULL=false
+	$(run-full-ci-targets)
 
 check: lint ci ## Everything CI runs
 

@@ -35,6 +35,7 @@ file  .devtools/vite/tsconfig.base.json
 file  .devtools/vite/tsconfig.package.json
 file  .devtools/scripts/strings.mjs
 file  .devtools/scripts/packages.mjs
+file  .devtools/scripts/affected.sh
 file  .devtools/scripts/gen.mjs
 file  .devtools/scripts/bundle-budget.mjs
 file  .prettierrc.json
