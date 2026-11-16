@@ -6,7 +6,7 @@ MISE := mise
 # A hosted build image, such as Workers Builds, has no mise: tools run from its PATH there, and
 # a host's deploy target checks those are the versions mise.toml pins.
 HAS_MISE := $(shell command -v $(MISE) 2>/dev/null)
-MISE_EXEC := $(if $(HAS_MISE),$(MISE_EXEC))
+MISE_EXEC := $(if $(HAS_MISE),$(MISE) exec --)
 pinned-version = $(shell sed -n 's/^$(1) = "\(.*\)"/\1/p' $(ROOT)/mise.toml)
 LEFTHOOK := $(MISE_EXEC) lefthook
 

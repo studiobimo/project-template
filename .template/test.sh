@@ -506,6 +506,12 @@ prettier_cache_at_its_default() {
     [[ "$(make -n --no-print-directory -C "${shop}/.devtools" -f plain.mk fmt fmt-check | grep -c -- '--cache-location node_modules/\.cache/prettier/\.prettier-cache')" == 2 ]]
 }
 expect 0 "prettier's cache is the file its own default names, inside its own directory" prettier_cache_at_its_default
+mkdir -p "${work}/mise-bin"
+printf '#!/bin/sh\nexit 0\n' >"${work}/mise-bin/mise"
+chmod +x "${work}/mise-bin/mise"
+with_mise_on_path() { PATH="${work}/mise-bin:${PATH}" make -n --no-print-directory -C "${shop}/.devtools" -f plain.mk "$@"; }
+with_mise_runs_tools_through_it() { with_mise_on_path fmt-check | grep -qF 'mise exec -- pnpm exec prettier --check'; }
+expect 0 "with mise on PATH, make runs the tools through mise exec" with_mise_runs_tools_through_it
 rm "${shop}/.devtools/plain.mk"
 rm "${shop}/.devtools/full.mk"
 
