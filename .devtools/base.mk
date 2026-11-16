@@ -17,7 +17,7 @@ GLYPH_FAIL := ✖
 DEVTOOLS := make -C .devtools
 
 .DEFAULT_GOAL := help
-.PHONY: help setup lint duplication scan lock-tools sync drift github
+.PHONY: help setup lint duplication scan lock-tools sync drift github ci
 
 help: ## List targets
 	@grep -hE '^[a-zA-Z_-]+:.*## ' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -30,6 +30,9 @@ lint: ## Run the pre-commit hook on all files
 	cd $(ROOT) && $(LEFTHOOK) run pre-commit --all-files
 
 check: duplication
+
+# What `ci / validate` runs. A profile adds what its tools need, the project its own.
+ci: duplication
 
 duplication: ## Fail on copy-pasted code, skipping what .jscpd.json ignores
 	cd $(ROOT) && $(MISE_EXEC) jscpd --exit-code 1 --no-colors .

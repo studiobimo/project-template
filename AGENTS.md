@@ -91,7 +91,7 @@ weekly workflow reports as an issue.
 
 | To change | Edit it in | It reaches this repo by |
 | --- | --- | --- |
-| CI behaviour (lint, PR checks, release) | `studiobimo/.github`, `.github/workflows/` | the `@v1` tag moving |
+| CI behaviour (baseline, validate, release) | `studiobimo/.github`, `.github/workflows/` | the `@v1` tag moving |
 | Branch and PR-size rules | `studiobimo/.github`, `.devtools/` | the `@v1` tag moving; lefthook refetches it daily |
 | Shared hooks and tool versions | `studiobimo/project-template` | `make -C .devtools sync` |
 | Files and blocks listed in the template's `.template/manifest`, and in the manifest of each profile in `.template-profiles` | `studiobimo/project-template` | `make -C .devtools sync` |
@@ -108,6 +108,7 @@ files to the fleet's owners.
 ```sh
 make -C .devtools setup   # once: pinned tools + git hooks
 make -C .devtools check   # everything CI runs
+make -C .devtools ci      # what ci / validate runs
 make -C .devtools lint    # the pre-commit hook, on every file
 make -C .devtools lock    # after changing a pinned version
 make -C .devtools drift   # where this repo differs from the template

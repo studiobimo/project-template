@@ -234,6 +234,22 @@ sync_block() {
     changed=$((changed + 1))
 }
 
+# A profile may manage a path the base manifest manages too, with its own version of it: the
+# vite-react-tanstack profile's ci.yml adds the caches its tools need. The profile's entry wins,
+# and the base's is skipped, so a project that opted in is never compared to both.
+entry_key() {
+    if [[ "$1" == block ]]; then echo "block $2 $3"; else echo "file $2"; fi
+}
+
+while read -r profile _; do
+    [[ "${profile}" =~ ^[a-z0-9][a-z0-9-]*$ && -f "${from}/${TEMPLATE_MANIFEST}.${profile}" ]] || continue
+    while read -r kind path name _; do
+        entry_key "${kind}" "${path}" "${name}"
+    done < <(entries_of "${from}/${TEMPLATE_MANIFEST}.${profile}")
+done < <(entries_of "${TEMPLATE_PROFILES}") >"${work}/overridden"
+
+layer=base
+
 # apply_manifest <manifest>: sync, or check, every entry in it. An entry is
 # `file <path> [required]` or `block <path> <name> [required]`.
 apply_manifest() {
@@ -245,6 +261,10 @@ apply_manifest() {
             *) die "${MSG_SYNC_UNKNOWN_ENTRY}" "${kind}" "${path}" ;;
         esac
         [[ -z "${flag}" || "${flag}" == "${FLAG_REQUIRED}" ]] || die "${MSG_SYNC_UNKNOWN_FLAG}" "${flag}" "${path}"
+
+        if [[ "${layer}" == base ]] && grep -Fxq -- "$(entry_key "${kind}" "${path}" "${name}")" "${work}/overridden"; then
+            continue
+        fi
 
         if ignored "${path}"; then
             if [[ "${flag}" != "${FLAG_REQUIRED}" ]]; then
@@ -269,6 +289,7 @@ apply_manifest() {
 apply_manifest "${from}/${TEMPLATE_MANIFEST}"
 
 # Profiles come after the base manifest, in the order the project lists them.
+layer=profile
 while read -r profile _; do
     [[ "${profile}" =~ ^[a-z0-9][a-z0-9-]*$ ]] || die "${MSG_SYNC_BAD_PROFILE}" "${TEMPLATE_PROFILES}" "${profile}"
     [[ -f "${from}/${TEMPLATE_MANIFEST}.${profile}" ]] \

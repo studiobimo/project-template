@@ -152,8 +152,8 @@ export default mergeConfig(base, defineConfig({ test: { environment: 'node' } })
 
 ### Narrowed CI and the full-only targets
 
-CI can narrow a pull request's checks to what it changes. The reusable workflow runs
-`make -C .devtools ci` with two variables, and a laptop sets neither, so a local `make ci` runs
+CI can narrow a pull request's checks to what it changes. `ci / validate`, which a draft and the
+middle of a stack defer, runs `make -C .devtools ci` with two variables, and a laptop sets neither, so a local `make ci` runs
 everything:
 
 | Variable | Meaning |
@@ -184,7 +184,7 @@ everything:
   `ci` runs them, in that order, after its own checks unless `CI_FULL=false`, and says what it
   skipped. Give a target the prerequisites it needs (`e2e: build playwright-install`) rather
   than relying on the order. Pull requests into `main`, pushes and the `ci:full` label are full
-  runs; pull requests into `develop` are narrowed.
+  runs; pull requests into `develop` are narrowed. Adding `ci:full` runs the full suites at once.
 
 ### Commands
 

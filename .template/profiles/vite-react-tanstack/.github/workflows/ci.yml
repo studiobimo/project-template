@@ -1,42 +1,47 @@
 name: CI
 
-# Installs the tools mise.toml pins and the packages pnpm-lock.yaml pins, then runs
-# `make -C .devtools ci`: build, route tree, types, ESLint, knip, jscpd, Prettier, tests,
-# bundle budget and the audit. It is the target a developer runs, at the same versions, so local and CI
-# results match. Managed by studiobimo/project-template (profile vite-react-tanstack).
+# The root ci.yml, plus the caches this profile's tools fill. `ci / validate` installs the tools
+# mise.toml pins and the packages pnpm-lock.yaml pins, then runs `make -C .devtools ci`: build,
+# route tree, types, ESLint, knip, jscpd, Prettier, tests, bundle budget and the audit, with
+# the browser suites only in a full run. It is the target a developer runs, at the same
+# versions, so local and CI results match. Managed by studiobimo/project-template (profile
+# vite-react-tanstack); it replaces the template's own ci.yml for a project that opts in.
 #
 # Nothing here reads a secret, so it is safe on pull requests from forks. Deploying is a
 # hosting profile's job, in its own workflow.
+#
+# The caches are restored on every run and saved only by a push to main or develop. In a pnpm
+# workspace the app's own node_modules/.cache and node_modules/.tmp are not at the root: list
+# them too, in a project that has APP_DIR.
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-  merge_group:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the full suites, not the ones narrowed to what changed.
+        type: boolean
+        default: false
 
 permissions: {}
 
 jobs:
-  check:
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
+  ci:
     permissions:
       contents: read
-    # Pushing again to a pull request supersedes the run in flight, so it is cancelled rather
-    # than billed to the end. A push to main and a merge group always finish.
-    concurrency:
-      group: ci-${{ github.ref }}
-      cancel-in-progress: ${{ github.event_name == 'pull_request' }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-
-      # With a mise.lock present the action passes --locked itself, so a tool whose
-      # checksum is not recorded fails here.
-      - uses: jdx/mise-action@7a4e45a543138629540c9a1616d08632b893e492 # v5.0.1
-        with:
-          version: 2026.10.0
-
-      - name: make ci
-        run: make -C .devtools ci
+      pull-requests: read
+    uses: studiobimo/.github/.github/workflows/ci-project.yml@v1
+    with:
+      full: ${{ inputs.full || false }}
+      timeout-minutes: 20
+      cache-path: |
+        node_modules/.cache
+        node_modules/.tmp
+        ~/.local/share/pnpm/store
+        ~/.cache/ms-playwright
+      cache-key-files: |
+        pnpm-lock.yaml
+        mise.lock
