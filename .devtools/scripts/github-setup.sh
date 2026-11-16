@@ -100,6 +100,15 @@ for env in ${envs[@]+"${envs[@]}"}; do
     fi
 done
 
+# The label ci-project reads to run the full suites. It is created rather than compared: a
+# label the project already has under that name keeps its own colour and description.
+if ! gh label list --repo "${repo}" --limit 1000 --json name --jq '.[].name' | grep -Fxq -- "${CI_FULL_LABEL}"; then
+    differs "${MSG_GH_LABEL_MISSING}" "${CI_FULL_LABEL}"
+    if [[ "${mode}" == apply ]]; then
+        gh label create "${CI_FULL_LABEL}" --repo "${repo}" --description "${CI_FULL_LABEL_DESC}" >/dev/null
+    fi
+fi
+
 if ((differences > 0)) && [[ "${mode}" == check ]]; then
     fail "${MSG_GH_DIFFERS}" "${repo}"
     exit "${EXIT_DIFFERS}"

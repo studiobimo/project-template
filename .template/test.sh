@@ -160,6 +160,16 @@ expect 0 ".template-ignore exempts a path inside a profile" "${psync[@]}" --chec
 rm .template-ignore
 expect 0 "sync puts it right again" "${psync[@]}"
 
+printf 'file   fixture.txt\nfile   lychee.toml\n' >"${prof}/.template/manifest.fixture"
+printf 'from the profile\n' >"${prof}/.template/profiles/fixture/lychee.toml"
+expect 1 "a profile's version of a path the base manages is drift until synced" "${psync[@]}" --check
+expect 0 "sync applies the profile's version" "${psync[@]}"
+expect 0 "so the file is the profile's, not the base's" grep -qx 'from the profile' lychee.toml
+expect 0 "and the copy is in step with both manifests" "${psync[@]}" --check
+printf 'file   fixture.txt\n' >"${prof}/.template/manifest.fixture"
+expect 0 "without the override, sync gives the base's version back" "${psync[@]}"
+expect 1 "which is no longer the profile's" grep -qx 'from the profile' lychee.toml
+
 printf 'file   fixture.txt\nblock  cfg.yml  extra  required\n' >"${prof}/.template/manifest.fixture"
 sed -i.bak 's/^key: value$/key: other/' cfg.yml && rm cfg.yml.bak
 printf '# ours\ncfg.yml\n' >.template-ignore
@@ -574,6 +584,7 @@ cat >"${work}/bin/gh" <<'GH'
 case "$1 $2" in
     "repo view") [[ -n "${GH_REPO_JSON:-}" ]] && echo "${GH_REPO_JSON}" || exit 1 ;;
     "api repos/acme/widget/environments/"*) exit 1 ;;
+    "label list") printf '%s' "${GH_LABELS:-}" ;;
     *) echo "$*" >>"${GH_LOG}" ;;
 esac
 GH
@@ -597,9 +608,11 @@ expect 0 "applies the setup" env DESC="A widget." ENVS=development "${setup[@]}"
 expect 0 "runs the shared settings for this repository" called "shared ORG=acme widget"
 expect 0 "sets the description" called "repo edit acme/widget --description A widget."
 expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/development"
+expect 0 "creates the label ci-project reads" \
+    called "label create ci:full --repo acme/widget --description Run the full CI now, with full test suites"
 
 : >"${GH_LOG}"
-expect 0 "leaves the description alone unless asked" "${setup[@]}"
+expect 0 "leaves the description alone unless asked" env GH_LABELS=ci:full "${setup[@]}"
 expect 1 "so nothing but the shared script ran" grep -qv '^shared ' "${GH_LOG}"
 expect 2 "refuses an environment name that is not one" env ENVS='a/b' "${setup[@]}"
 expect 2 "refuses without admin rights" \
