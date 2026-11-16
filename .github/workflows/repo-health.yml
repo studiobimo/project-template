@@ -14,6 +14,11 @@ jobs:
     permissions:
       contents: read
       issues: read
+      # ci-repo-health will request packages: read so its dependency install can authenticate to
+      # GitHub Packages (npm.pkg.github.com) when a tracked .npmrc uses it. A reusable job cannot
+      # hold more than its caller, so the run fails to start unless every caller grants it up front.
+      # It is read-only.
+      packages: read
     uses: studiobimo/.github/.github/workflows/ci-repo-health.yml@v1
     with:
       allow-config-change: ${{ contains(github.event.pull_request.labels.*.name, 'repo-health-config-change') }}
