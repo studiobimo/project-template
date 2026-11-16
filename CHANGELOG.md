@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.2](https://github.com/studiobimo/project-template/compare/v0.14.1...v0.14.2) (2026-11-16)
+
+
+### Bug Fixes
+
+* **ci:** grant packages read to the repo-health caller ([#96](https://github.com/studiobimo/project-template/issues/96)) ([91e52ff](https://github.com/studiobimo/project-template/commit/91e52ff272bc24ad26f5a4b1df7f7d9b8c873c86))
+
 ## [0.14.1](https://github.com/studiobimo/project-template/compare/v0.14.0...v0.14.1) (2026-11-16)
 
 
