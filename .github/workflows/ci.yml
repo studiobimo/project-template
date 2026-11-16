@@ -29,6 +29,10 @@ jobs:
     permissions:
       contents: read
       pull-requests: read
+      # The validate job asks for packages: read when the project installs packages from GitHub
+      # Packages (the reusable's opt-in github-packages input). A called job cannot hold more than
+      # its caller, so every caller grants it up front. It is read-only.
+      packages: read
     uses: studiobimo/.github/.github/workflows/ci-project.yml@v1
     with:
       full: ${{ inputs.full || false }}
