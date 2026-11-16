@@ -12,6 +12,7 @@ clean: ## Remove build outputs
 # >>> template:init
 .PHONY: init test
 check: test
+ci: test
 test: ## Test the sync and init scripts (template only)
 	@$(ROOT)/.template/test.sh
 init: ## Once, in a new project: make -C .devtools init NAME="My Project" SLUG=my-project DESC="What it is."

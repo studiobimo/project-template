@@ -1,17 +1,38 @@
 name: CI
 
-# Thin wrapper around the org's Java/Gradle toolchain workflow. `check` is the
-# same target `make -C .devtools check` runs, so local and CI results match.
+# Two jobs. `ci` is the org's baseline and validate (`ci / baseline`, `ci / validate`): the
+# hooks, the pull request's title, branch, size and commits, and `make -C .devtools ci`, which
+# for this profile is the duplication check. `check` is the toolchain build, which `ci / validate`
+# cannot run: it needs the JDK `.java-version` names, the Gradle setup and cache, and uploads
+# the jars, none of which ci-project provides. `check` is the same Gradle target
+# `make -C .devtools check` runs, so local and CI results match.
+#
+# Managed by studiobimo/project-template (profile java-gradle); it replaces the template's own
+# ci.yml for a project that opts in.
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-  merge_group:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the full suites, not the ones narrowed to what changed.
+        type: boolean
+        default: false
 
 permissions: {}
 
 jobs:
+  ci:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: studiobimo/.github/.github/workflows/ci-project.yml@v1
+    with:
+      full: ${{ inputs.full || false }}
+
   check:
     # A called workflow can never hold more than its caller, so the caller has to
     # grant what it needs. `permissions: {}` above keeps every other job at nothing.

@@ -9,7 +9,7 @@
 #     gh stack init|add <name>                    -> Conventional Branch
 #
 # The rules themselves are the org's lefthook jobs (studiobimo/.github), run by
-# name, so this file only decides when to ask. CI (pr-checks) remains the
+# name, so this file only decides when to ask. CI (ci / baseline) remains the
 # authoritative gate; this is a guardrail, so anything missing lets the call through.
 #
 # Managed by studiobimo/project-template; change it there.

@@ -68,6 +68,16 @@ gh stack sync                          # after a lower layer merges
 Each layer is measured against the layer below it. The limit is enforced in the `pre-push` hook,
 in CI, and for AI agents through a PreToolUse hook (`.devtools/scripts/agent-guard.sh`).
 
+### CI: baseline and validate
+
+Every pull request gets two required checks. `ci / baseline` runs on every push, drafts
+included: the pre-commit hooks over every file, and the title, branch, size and commits.
+`ci / validate` runs `make -C .devtools ci`, and is deferred while the pull request is a draft or
+the middle of a stack; it runs, as a passing check, once the pull request is ready. Into `develop`
+it narrows the tests to what changed, into `main` it runs them all, and the `ci:full` label runs
+them all at once (a target that only a full run executes goes in `FULL_CI_TARGETS`). Editing the
+title re-checks it. A manual run of the CI workflow takes a `full` input.
+
 ### Files the template manages
 
 Some files, and the regions of others between `>>> template:<name>` and `<<< template:<name>`
@@ -92,7 +102,7 @@ Never edit a version by hand. Until 1.0.0, breaking changes bump the minor versi
 ## Repository settings (maintainers)
 
 Where GitHub offers them, rulesets protect `main`: PRs required, squash-only, linear history, and
-required checks `pr-checks` and `lint`. A private repository on the Free plan gets none of that, so
+required checks `ci / baseline` and `ci / validate`. A private repository on the Free plan gets none of that, so
 `main` takes direct pushes and only the local hooks and the agent guard hold these rules.
 The rulesets and the other repository settings are defined in `studiobimo/.github`.
 `make -C .devtools github` applies them to this repository and needs `gh` signed in as an admin;

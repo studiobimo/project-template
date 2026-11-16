@@ -1,6 +1,6 @@
 # studiobimo/project-template
 
-[![Lint](https://github.com/studiobimo/project-template/actions/workflows/lint.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/lint.yml)
+[![CI](https://github.com/studiobimo/project-template/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/ci.yml)
 [![Release](https://github.com/studiobimo/project-template/actions/workflows/release.yml/badge.svg?branch=main)](https://github.com/studiobimo/project-template/actions/workflows/release.yml)
 
 The starting point for a new [studiobimo](https://github.com/studiobimo) repository, whatever it
@@ -13,7 +13,8 @@ is written in. It carries the parts every project shares and nothing about any o
   hooks, in CI, and for AI agents before they act. Issue titles follow Conventional Commits too:
   the issue forms start them with a type, and a workflow flags one that does not.
 - **CI and releases** as thin wrappers over
-  [studiobimo/.github](https://github.com/studiobimo/.github): lint, PR checks, release-please.
+  [studiobimo/.github](https://github.com/studiobimo/.github): `ci.yml` (baseline and validate), `pr-events.yml`,
+  release-please.
 - **An agent guide**: `AGENTS.md` with the layout, the rules, the commands and where shared
   things live. `CLAUDE.md` imports it, so every agent reads the same file.
 
@@ -43,7 +44,7 @@ pull requests only, so the initialising commit goes up as one; `init` prints the
 
 A private repository gets [less on the Free plan](https://github.com/studiobimo/.github#rulesets-and-repository-settings).
 GitHub offers it no rulesets, secret scanning or private vulnerability reporting, so `github`
-skips them with a note. `main` then takes direct pushes, and `pr-checks` and `lint` run but are not
+skips them with a note. `main` then takes direct pushes, and `ci / baseline` and `ci / validate` run but are not
 required. Only the local hooks and the agent guard hold the rules, and both can be skipped.
 
 Then add the language: build files, the project's own Makefile targets, tools in `mise.toml`
@@ -56,7 +57,7 @@ of three kinds, and [`.template/manifest`](.template/manifest) says which:
 
 | Kind | Examples | After day one |
 | --- | --- | --- |
-| **Managed file** | `.devtools/base.mk`, `.devtools/lefthook-base.yml`, `.devtools/scripts/*.sh` (`strings.sh` holds their names and messages), `.codex/*`, `pr-checks.yml`, `issue-title.yml` | Identical everywhere. `sync` overwrites it. |
+| **Managed file** | `.devtools/base.mk`, `.devtools/lefthook-base.yml`, `.devtools/scripts/*.sh` (`strings.sh` holds their names and messages), `.codex/*`, `ci.yml`, `pr-events.yml`, `issue-title.yml` | Identical everywhere. `sync` overwrites it. |
 | **Managed block** | the `base` region of `.gitignore`, the shared tools in `mise.toml`, the rules in `AGENTS.md` | Identical between its `>>> template:<name>` and `<<< template:<name>` markers. The rest of the file is the project's. |
 | **Seeded** | `README.md`, `.devtools/Makefile`, `.commitlintrc.yaml`, `release.yml`, the issue forms | The project's. Never compared. |
 
@@ -71,13 +72,49 @@ Each project also runs `template-drift.yml` weekly. It keeps one issue labelled 
 open while anything differs, rewrites it as that changes, and closes it when the repo is back in
 step. A project that has to differ on purpose lists the path in `.template-ignore`.
 
-Some entries are marked `required` in the manifest: the agent guard, the shared hooks, the PR,
-issue-title and drift workflows, `template-sync.sh` itself and the `strings.sh` it reads, the
+Some entries are marked `required` in the manifest: the agent guard, the shared hooks, the CI,
+PR-events, issue-title and drift workflows, `template-sync.sh` itself and the `strings.sh` it reads, the
 rules in `AGENTS.md`, and the `overrides` block of `CODEOWNERS`.
 They are what keeps every repo honest, so `.template-ignore` cannot switch them off:
 listing one there is reported as drift, and `sync` applies it anyway. The `overrides` block makes
 the fleet's owners review every change to `.template-ignore`, `.template-profiles`, the tool pins
 and the agent settings, so a repo can still depart from the template, but not without review.
+
+### CI
+
+`ci.yml` calls the org's `ci-project` and gives a pull request two required checks. `ci / baseline`
+runs on every push, drafts included: the pre-commit hooks over every file (secret scan and linters)
+and the pull request's title, branch, size and commits. `ci / validate` runs `make -C .devtools ci`
+and is decided by the policy in [studiobimo/.github](https://github.com/studiobimo/.github#baseline-and-validate):
+
+- A draft, and the middle of a stack of pull requests, defer it. It runs when the pull request is
+  marked ready, and a skipped `ci / validate` counts as passing.
+- A pull request into `develop` or a stack layer narrows the tests to what changed
+  (`AFFECTED_BASE`, `CI_FULL=false`); one into `main`, a push, a fork and a manual run with `full`
+  run everything.
+- The `ci:full` label runs everything now, whatever else is true. `make -C .devtools github`
+  creates the label ("Run the full CI now, with full test suites").
+- A profile lists in `FULL_CI_TARGETS` the targets that only a full run executes (browser suites, say);
+  `ci` runs them unless `CI_FULL=false`.
+
+`pr-events.yml` is its companion: a title edit re-checks the title, and adding `ci:full` or
+retargeting the pull request dispatches `ci.yml` again. Both files stay as the template ships them;
+the job in `ci.yml` has to be named `ci`.
+
+A project with no profile validates with the base `ci` target, the duplication check. A profile adds
+to it, and may ship its own `ci.yml`: the `vite-react-tanstack` profile's adds the caches its tools
+fill, and the `java-gradle` profile's keeps the Gradle build as a separate `check` job. For a
+project that opts in, sync takes the profile's file and ignores the template's. The template itself
+validates with `.template/test.sh`.
+
+#### Moving an existing project over
+
+`sync` only writes files, so it does not delete what the template stopped shipping. After the sync
+that brings `ci.yml` and `pr-events.yml`, delete `.github/workflows/pr-checks.yml` and
+`.github/workflows/lint.yml` by hand: their work is in `ci / baseline`. Then change the
+repository's required checks from `pr-checks / ...`, `lint / hooks` (and `check`, or `check / check`
+for `java-gradle`) to `ci / baseline` and `ci / validate`. A `java-gradle` project keeps requiring
+`check / check` as well, which is still its Gradle build.
 
 ### Profiles
 
@@ -195,9 +232,11 @@ The rules themselves do not live here. The branch and PR-size checks are lefthoo
 
 ## Working on the template
 
-It is a working project, so its own lint, PR checks and releases exercise every file it ships.
+It is a working project, so its own CI (`ci.yml`, with `ci / validate` running `.template/test.sh`),
+PR events and releases exercise every file it ships.
 
 ```sh
 make -C .devtools setup
 make -C .devtools check   # lint, plus .template/test.sh for the sync and init scripts
+make -C .devtools ci      # what ci / validate runs here: .template/test.sh
 ```

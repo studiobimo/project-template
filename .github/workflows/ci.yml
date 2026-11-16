@@ -1,0 +1,34 @@
+name: CI
+
+# One workflow, two required checks: `ci / baseline` (the hooks, and the pull request's title,
+# branch, size and commits; on every push, drafts included) and `ci / validate` (the project's
+# `make -C .devtools ci`; deferred on a draft and on the middle of a stack, narrowed to what
+# changed, full into main or with the `ci:full` label). The job has to be named `ci`: the
+# rulesets require those names. Do not filter the triggers by `paths:`, or the required checks
+# never report; the reusable has a `paths` input for that.
+#
+# `edited` and `labeled` are pr-events.yml's. Managed by studiobimo/project-template; a profile
+# may ship its own version of this file, with the caches or jobs its tools need.
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  workflow_dispatch:
+    inputs:
+      full:
+        description: Run the full suites, not the ones narrowed to what changed.
+        type: boolean
+        default: false
+
+permissions: {}
+
+jobs:
+  ci:
+    permissions:
+      contents: read
+      pull-requests: read
+    uses: studiobimo/.github/.github/workflows/ci-project.yml@v1
+    with:
+      full: ${{ inputs.full || false }}

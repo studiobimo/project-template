@@ -14,6 +14,10 @@
 # is itself drift, and sync applies the entry anyway. Make an entry required here, in a
 # reviewed change to the template, never in a project.
 #
+# A profile's manifest may list a path this one lists, with its own version of it: sync takes the
+# profile's for a project that opted in, and ignores this one. A file dropped from here is not
+# deleted from projects: sync only writes. Delete it by hand, as the README's migration note says.
+#
 # Nothing listed here may contain the init placeholders (Project Name, project-slug):
 # init.sh would rewrite them and the new project would be born drifted.
 
@@ -30,7 +34,8 @@ file  LICENSE
 file  lychee.toml
 file  .markdownlint-cli2.yaml
 file  .github/zizmor.yml
-file  .github/workflows/pr-checks.yml           required
+file  .github/workflows/ci.yml                  required
+file  .github/workflows/pr-events.yml           required
 file  .github/workflows/template-drift.yml      required
 file  .github/workflows/issue-title.yml         required
 file  .github/workflows/repo-health.yml         required

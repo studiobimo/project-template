@@ -1,0 +1,20 @@
+name: PR events
+
+# What must not run CI itself: a title edit re-checks the title, and the `ci:full` label (or
+# retargeting the pull request) dispatches ci.yml again. Kept apart from ci.yml so a skipped
+# job here can never post over a required check there.
+
+on:
+  pull_request:
+    types: [edited, labeled]
+
+permissions: {}
+
+jobs:
+  events:
+    permissions:
+      contents: read
+      actions: write
+    uses: studiobimo/.github/.github/workflows/ci-pr-events.yml@v1
+    with:
+      workflow: ci.yml
