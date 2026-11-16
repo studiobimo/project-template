@@ -11,7 +11,9 @@ every entry of `APPS`), so run `wrangler` there.
 - **One Worker serves the app.** Static files come from `dist/client`, and any path that is
   not a file falls back to `index.html` for the router. Only `/api/*` runs the Hono app in
   `worker/index.ts`. `make -C .devtools dev` runs it in workerd beside the client, with
-  the bindings in `wrangler.jsonc` simulated locally.
+  the bindings in `wrangler.jsonc` simulated locally. Every app keeps that local D1, KV and R2
+  in `.dev-state/` at the repository's root, so in a workspace each app sees what another
+  wrote. Give other local `wrangler` commands `--persist-to <root>/.dev-state` to reach it.
 - **Environments.** The top level of `wrangler.jsonc` is local development. Deploys go to
   `env.development` or `env.production`, as `<name>-development` and `<name>-production`.
   Neither inherits bindings or vars from the top level, so restate them in each. A project
