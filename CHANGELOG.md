@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.14.1](https://github.com/studiobimo/project-template/compare/v0.14.0...v0.14.1) (2026-11-16)
+
+
+### Bug Fixes
+
+* run tools through mise, keep prettier's cache, and let ci-project read packages ([#93](https://github.com/studiobimo/project-template/issues/93)) ([75ac4d0](https://github.com/studiobimo/project-template/commit/75ac4d0b86cf5b7fe955be7986bfd3cc4c39dd40))
+
 ## [0.14.0](https://github.com/studiobimo/project-template/compare/v0.13.0...v0.14.0) (2026-11-16)
 
 
