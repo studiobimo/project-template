@@ -173,6 +173,10 @@ sync_file() {
     ok "${MSG_SYNC_UPDATED}" "${path}"
 }
 
+is_unmarked_copy() {
+    sed '1d;$d' "$2" | cmp -s - "$1"
+}
+
 sync_block() {
     local path="$1" name="$2" src="${src_root}/$1" state
     [[ -f "${src}" ]] || die "${MSG_SYNC_NOT_IN_TEMPLATE}" "${path}"
@@ -215,6 +219,9 @@ sync_block() {
         mkdir -p "$(dirname "${path}")"
         cp "${work}/theirs" "${path}"
         ok "${MSG_SYNC_CREATED}" "${path}" "${name}"
+    elif [[ "${state}" == absent ]] && is_unmarked_copy "${path}" "${work}/theirs"; then
+        cp "${work}/theirs" "${path}"
+        ok "${MSG_SYNC_ADOPTED}" "${path}" "${name}"
     elif [[ "${state}" == absent ]]; then
         # No markers to aim at, so the end of the file is the only safe place.
         { echo; cat "${work}/theirs"; } >>"${path}"

@@ -147,6 +147,7 @@ FINDING_MARKERS_REPEATED="block '%s' appears more than once; keep one copy"
 MSG_SYNC_UPDATED='%s: updated'
 MSG_SYNC_CREATED="%s: created with block '%s'"
 MSG_SYNC_APPENDED="%s: block '%s' appended; move it to where it belongs"
+MSG_SYNC_ADOPTED="%s: block '%s' now wraps the whole file, which already matched it"
 MSG_SYNC_BLOCK_UPDATED="%s: block '%s' updated"
 
 MSG_SYNC_DRIFT='%d difference(s) from %s@%s (last synced: %s).'

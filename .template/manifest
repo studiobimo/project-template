@@ -23,7 +23,7 @@ file  .devtools/scripts/strings.sh              required
 file  .devtools/scripts/agent-guard.sh          required
 file  .devtools/scripts/template-sync.sh        required
 file  .devtools/scripts/github-setup.sh
-file  .codex/config.toml
+block .codex/config.toml        base
 file  .codex/hooks.json                         required
 file  CLAUDE.md
 file  LICENSE

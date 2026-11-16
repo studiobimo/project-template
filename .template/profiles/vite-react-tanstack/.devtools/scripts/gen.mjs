@@ -1,17 +1,18 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join, matchesGlob, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
+import { appDirOf, readFromRoot } from './app-dir.mjs'
 import { genMessages as say, genNext, glyph } from './strings.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
-const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
+const read = (path) => readFromRoot(root, path)
 
-const appDir = read('.devtools/Makefile').match(/^(?:APP_DIR|APPS)\s*[:?]?=\s*(\S+)/m)?.[1] ?? '.'
+const appDir = appDirOf(root)
 const app = join(root, appDir)
 const workspace = appDir !== '.'
 
