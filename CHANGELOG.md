@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.13.0](https://github.com/studiobimo/project-template/compare/v0.12.0...v0.13.0) (2026-11-16)
+
+
+### Features
+
+* **devtools:** narrow vite tests to what a pull request changes, browser suites in full runs only ([#89](https://github.com/studiobimo/project-template/issues/89)) ([99b6b97](https://github.com/studiobimo/project-template/commit/99b6b978d8cb3fcfd7f82f347db74eefdf7c870a))
+
 ## [0.12.0](https://github.com/studiobimo/project-template/compare/v0.11.4...v0.12.0) (2026-11-16)
 
 
