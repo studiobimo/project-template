@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.11.4](https://github.com/studiobimo/project-template/compare/v0.11.3...v0.11.4) (2026-11-16)
+
+
+### Bug Fixes
+
+* **devtools:** share local D1, KV and R2 between the apps under make dev ([#85](https://github.com/studiobimo/project-template/issues/85)) ([4918fa1](https://github.com/studiobimo/project-template/commit/4918fa19e33911c65456fbebbfe802798c5e6531))
+
 ## [0.11.3](https://github.com/studiobimo/project-template/compare/v0.11.2...v0.11.3) (2026-11-08)
 
 
