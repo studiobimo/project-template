@@ -5,8 +5,13 @@
 #   block <path> <name>   only the region between the `>>> template:<name>` and
 #                         `<<< template:<name>` marker lines; the rest of the file
 #                         is the project's
+#   seed  <path>          a file the project owns but must have: sync writes the template's
+#                         copy only when the project has none, and never overwrites or
+#                         compares it afterwards. Its absence is drift, whatever it contains.
+#                         `seed <path> required` means the same as for the other kinds
 #
-# Anything not listed is seeded once and then belongs to the project. A project opts
+# Anything not listed is seeded once, by init, and then belongs to the project; a seed entry
+# is for a file that projects created before the template shipped it never got. A project opts
 # out of an entry by listing its path in .template-ignore, with a comment saying why.
 #
 # An entry that ends in `required` cannot be opted out of: it is one of the guards every
@@ -51,3 +56,7 @@ block lefthook.yml            base       required
 block AGENTS.md               rules      required
 block CONTRIBUTING.md         workflow
 block .github/CODEOWNERS      overrides  required
+
+# Last, so a project whose older sync does not know `seed` has had everything above applied
+# (itself included) before it stops there. Run sync again and the new one takes over.
+seed  .repo-health/baseline.json

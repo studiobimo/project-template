@@ -9,8 +9,8 @@
 #   --ref <tag>  template release to use (default: the latest); with --from it only
 #                names the version in the output
 #
-# The template's .template/manifest says what is managed: whole files, and marked
-# blocks inside files the project otherwise owns. Paths listed in this repo's
+# The template's .template/manifest says what is managed: whole files, marked blocks inside
+# files the project otherwise owns, and seeds, files the project owns but must have. Paths listed in this repo's
 # .template-ignore, one per line with an optional `# reason`, are left alone, unless the
 # manifest marks the entry `required`.
 #
@@ -173,6 +173,25 @@ sync_file() {
     ok "${MSG_SYNC_UPDATED}" "${path}"
 }
 
+# A seed is the template's copy of a file the project owns. It is written when the project has
+# no such file and never compared or overwritten after that, so a missing one is the only drift.
+sync_seed() {
+    local path="$1" src="${src_root}/$1"
+    [[ -f "${src}" ]] || die "${MSG_SYNC_NOT_IN_TEMPLATE}" "${path}"
+    [[ ! -e "${path}" ]] || return 0
+
+    if [[ "${mode}" == check ]]; then
+        report "${path}" "${FINDING_MISSING}"
+        return 0
+    fi
+
+    mkdir -p "$(dirname "${path}")"
+    cp "${src}" "${path}"
+    if [[ -x "${src}" ]]; then chmod +x "${path}"; else chmod -x "${path}"; fi
+    changed=$((changed + 1))
+    ok "${MSG_SYNC_SEEDED}" "${path}"
+}
+
 is_unmarked_copy() {
     sed '1d;$d' "$2" | cmp -s - "$1"
 }
@@ -251,12 +270,12 @@ done < <(entries_of "${TEMPLATE_PROFILES}") >"${work}/overridden"
 layer=base
 
 # apply_manifest <manifest>: sync, or check, every entry in it. An entry is
-# `file <path> [required]` or `block <path> <name> [required]`.
+# `file <path> [required]`, `seed <path> [required]` or `block <path> <name> [required]`.
 apply_manifest() {
     local kind path name flag _
     while read -r kind path name flag _; do
         case "${kind}" in
-            file) flag="${name}"; name="" ;;
+            file | seed) flag="${name}"; name="" ;;
             block) [[ -n "${name}" && "${name}" != "${FLAG_REQUIRED}" ]] || die "${MSG_SYNC_NEEDS_NAME}" "${path}" ;;
             *) die "${MSG_SYNC_UNKNOWN_ENTRY}" "${kind}" "${path}" ;;
         esac
@@ -281,6 +300,7 @@ apply_manifest() {
         fi
         case "${kind}" in
             file) sync_file "${path}" ;;
+            seed) sync_seed "${path}" ;;
             block) sync_block "${path}" "${name}" ;;
         esac
     done < <(entries_of "$1")
