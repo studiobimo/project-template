@@ -625,10 +625,19 @@ expect 0 "sets the description" called "repo edit acme/widget --description A wi
 expect 0 "creates the environment" called "api -X PUT repos/acme/widget/environments/development"
 expect 0 "creates the label ci-project reads" \
     called "label create ci:full --repo acme/widget --description Run the full CI now, with full test suites"
+expect 0 "and the label repo-health reads" \
+    called "label create repo-health-config-change --repo acme/widget --description A reviewer allows this pull request to change an analyser config"
 
 : >"${GH_LOG}"
-expect 0 "leaves the description alone unless asked" env GH_LABELS=ci:full "${setup[@]}"
+both_labels=$'ci:full\nrepo-health-config-change'
+expect 0 "leaves the description alone unless asked" env GH_LABELS="${both_labels}" "${setup[@]}"
 expect 1 "so nothing but the shared script ran" grep -qv '^shared ' "${GH_LOG}"
+
+: >"${GH_LOG}"
+expect 0 "creates only the label that is missing" env GH_LABELS=ci:full "${setup[@]}"
+expect 0 "the repo-health label, when ci:full is already there" \
+    called "label create repo-health-config-change --repo acme/widget --description A reviewer allows this pull request to change an analyser config"
+expect 1 "and not ci:full again" grep -qF 'label create ci:full' "${GH_LOG}"
 expect 2 "refuses an environment name that is not one" env ENVS='a/b' "${setup[@]}"
 expect 2 "refuses without admin rights" \
     env GH_REPO_JSON='{"nameWithOwner":"acme/widget","description":"","viewerCanAdminister":false}' "${setup[@]}"

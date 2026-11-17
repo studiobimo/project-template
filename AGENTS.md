@@ -75,7 +75,8 @@ violation is caught before it is reviewed.
 - **Repo health:** the `repo-health` workflow runs these and more (lizard: functions under 80
   lines) over every tracked file. A finding fails it unless `.repo-health/baseline.json` lists it
   with an open issue, and each pull request resolves at least one listed finding while any are
-  left. Changing an analyser's config needs the `repo-health-config-change` label.
+  left. Changing an analyser's config needs the `repo-health-config-change` label, which
+  `make -C .devtools github` creates.
 - **Constants by domain:** grouped in objects, `DOMAIN.group.name`, not `DOMAIN_GROUP_NAME`.
 - **Say what you tested.** State what you ran and what it showed. If something could not be
   tested, say so plainly rather than implying it was.
