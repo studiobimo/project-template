@@ -99,7 +99,8 @@ and is decided by the policy in [studiobimo/.github](https://github.com/studiobi
   (`AFFECTED_BASE`, `CI_FULL=false`); one into `main`, a push, a fork and a manual run with `full`
   run everything.
 - The `ci:full` label runs everything now, whatever else is true. `make -C .devtools github`
-  creates the label ("Run the full CI now, with full test suites").
+  creates it ("Run the full CI now, with full test suites"), and the `repo-health-config-change`
+  label that lets a reviewed pull request change an analyser's config.
 - A profile lists in `FULL_CI_TARGETS` the targets that only a full run executes (browser suites, say);
   `ci` runs them unless `CI_FULL=false`.
 

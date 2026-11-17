@@ -100,14 +100,22 @@ for env in ${envs[@]+"${envs[@]}"}; do
     fi
 done
 
-# The label ci-project reads to run the full suites. It is created rather than compared: a
-# label the project already has under that name keeps its own colour and description.
-if ! gh label list --repo "${repo}" --limit 1000 --json name --jq '.[].name' | grep -Fxq -- "${CI_FULL_LABEL}"; then
-    differs "${MSG_GH_LABEL_MISSING}" "${CI_FULL_LABEL}"
+# ensure_label <name> <description>: creates a label the repository lacks. It is created rather
+# than compared: a label the project already has under that name keeps its own colour and
+# description.
+ensure_label() {
+    grep -Fxq -- "$1" <<<"${labels}" && return 0
+    differs "${MSG_GH_LABEL_MISSING}" "$1"
     if [[ "${mode}" == apply ]]; then
-        gh label create "${CI_FULL_LABEL}" --repo "${repo}" --description "${CI_FULL_LABEL_DESC}" >/dev/null
+        gh label create "$1" --repo "${repo}" --description "$2" >/dev/null
     fi
-fi
+}
+
+labels="$(gh label list --repo "${repo}" --limit 1000 --json name --jq '.[].name')" || die "${MSG_GH_NO_LABELS}" "${repo}"
+# ci-project reads the first to run the full suites; repo-health reads the second to let a
+# reviewed pull request change an analyser's config.
+ensure_label "${CI_FULL_LABEL}" "${CI_FULL_LABEL_DESC}"
+ensure_label "${REPO_HEALTH_CONFIG_LABEL}" "${REPO_HEALTH_CONFIG_LABEL_DESC}"
 
 if ((differences > 0)) && [[ "${mode}" == check ]]; then
     fail "${MSG_GH_DIFFERS}" "${repo}"
