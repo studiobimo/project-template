@@ -132,6 +132,36 @@ expect 0 "sync survives replacing itself" .devtools/scripts/template-sync.sh --f
 expect 0 "and is in step afterwards" .devtools/scripts/template-sync.sh --check --from "${newer}" --ref v9.9.9
 expect 0 "back on the released script" "${sync[@]}"
 
+# Seeds: written when the project has no such file, never touched afterwards.
+rm -f .template-ignore
+expect 0 "the template seeds the repo-health baseline" grep -qx 'seed  .repo-health/baseline.json' "${src}/.template/manifest"
+rm .repo-health/baseline.json
+expect 1 "a missing seed file is drift" "${sync[@]}" --check
+expect 0 "sync seeds it" "${sync[@]}"
+expect 0 "from the template's copy" cmp .repo-health/baseline.json "${src}/.repo-health/baseline.json"
+echo '{"version": 1, "findings": [{"id": "ours"}]}' >.repo-health/baseline.json
+expect 0 "a seed file with other content is in step" "${sync[@]}" --check
+expect 0 "and sync leaves it alone" "${sync[@]}"
+expect 0 "so the project's content survives" grep -q '"ours"' .repo-health/baseline.json
+rm .repo-health/baseline.json
+printf '# ours\n.repo-health/baseline.json\n' >.template-ignore
+expect 0 "an ignored seed path is not drift" "${sync[@]}" --check
+expect 0 "and sync does not seed it" "${sync[@]}"
+expect 1 "so it is still missing" test -e .repo-health/baseline.json
+rm .template-ignore
+expect 0 "sync seeds it once ignoring ends" "${sync[@]}"
+seeded="${work}/seeded"
+cp -R "${src}" "${seeded}"
+printf 'seed  .repo-health/baseline.json  required\n' >>"${seeded}/.template/manifest"
+sed -i.bak '/^seed  \.repo-health\/baseline\.json$/d' "${seeded}/.template/manifest" && rm "${seeded}/.template/manifest.bak"
+ssync=(.devtools/scripts/template-sync.sh --from "${seeded}" --ref v9.9.9)
+rm .repo-health/baseline.json
+printf '# ours\n.repo-health/baseline.json\n' >.template-ignore
+expect 1 "a required seed cannot be ignored" "${ssync[@]}" --check
+expect 0 "sync seeds it anyway" "${ssync[@]}"
+expect 0 "and the file is there" test -f .repo-health/baseline.json
+rm .template-ignore
+
 # Profiles: a second manifest, read from its own directory, switched on by .template-profiles.
 rm -f .template-ignore
 expect 0 "back in step before the profile cases" "${sync[@]}"

@@ -6,6 +6,8 @@
     "**/.mise/locks/**",
     "**/src/routeTree.gen.ts",
     "**/src/components/ui/**",
-    "**/.template/profiles/**"
-  ]
+    "**/.template/profiles/**",
+    "**/gradlew.bat"
+  ],
+  "ignorePattern": ["import .*"]
 }

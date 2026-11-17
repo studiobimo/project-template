@@ -145,6 +145,7 @@ FINDING_MARKERS_UNOPENED="block '%s' has a '<<<' marker and no '>>>' marker befo
 FINDING_MARKERS_REPEATED="block '%s' appears more than once; keep one copy"
 
 MSG_SYNC_UPDATED='%s: updated'
+MSG_SYNC_SEEDED="%s: seeded from the template; the project's own from here on"
 MSG_SYNC_CREATED="%s: created with block '%s'"
 MSG_SYNC_APPENDED="%s: block '%s' appended; move it to where it belongs"
 MSG_SYNC_ADOPTED="%s: block '%s' now wraps the whole file, which already matched it"

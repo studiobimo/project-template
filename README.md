@@ -53,12 +53,13 @@ and jobs in `lefthook.yml`, a CI workflow, and the Project, Layout and Conventio
 ## Staying in step
 
 A template only helps on day one unless something keeps the copies honest. Every file here is one
-of three kinds, and [`.template/manifest`](.template/manifest) says which:
+of four kinds, and [`.template/manifest`](.template/manifest) says which:
 
 | Kind | Examples | After day one |
 | --- | --- | --- |
 | **Managed file** | `.devtools/base.mk`, `.devtools/lefthook-base.yml`, `.devtools/scripts/*.sh` (`strings.sh` holds their names and messages), `.codex/*`, `ci.yml`, `pr-events.yml`, `issue-title.yml` | Identical everywhere. `sync` overwrites it. |
 | **Managed block** | the `base` region of `.gitignore`, the shared tools in `mise.toml`, the rules in `AGENTS.md` | Identical between its `>>> template:<name>` and `<<< template:<name>` markers. The rest of the file is the project's. |
+| **Seed entry** | `.repo-health/baseline.json` | The project's. `sync` writes it only if the project has none, never overwrites it; `drift` reports a missing one and ignores the content. For a file projects created before the template shipped it never got. |
 | **Seeded** | `README.md`, `.devtools/Makefile`, `.commitlintrc.yaml`, `release.yml`, the issue forms | The project's. Never compared. |
 
 In a project:
@@ -79,6 +80,11 @@ They are what keeps every repo honest, so `.template-ignore` cannot switch them 
 listing one there is reported as drift, and `sync` applies it anyway. The `overrides` block makes
 the fleet's owners review every change to `.template-ignore`, `.template-profiles`, the tool pins
 and the agent settings, so a repo can still depart from the template, but not without review.
+
+A `seed` entry takes `required` too, with the same meaning: listing its path in `.template-ignore`
+is drift and `sync` seeds the file anyway. The baseline is a plain seed. A project whose `sync` is
+older than the `seed` kind gets everything listed before it, itself included, and then stops with
+`unknown entry 'seed ...'` (exit 2); running `sync` again, now with the new script, writes the seed.
 
 ### CI
 
