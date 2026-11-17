@@ -1,5 +1,18 @@
 # Changelog
 
+## [0.15.0](https://github.com/studiobimo/project-template/compare/v0.14.2...v0.15.0) (2026-11-17)
+
+
+### Features
+
+* **devtools:** add seed manifest entries and seed the repo-health baseline ([#98](https://github.com/studiobimo/project-template/issues/98)) ([78f27c1](https://github.com/studiobimo/project-template/commit/78f27c159a757ec07835221b83362547037fe38b))
+
+
+### Bug Fixes
+
+* **ci:** skip spotless in the java-gradle baseline and ignore import lists in jscpd ([#99](https://github.com/studiobimo/project-template/issues/99)) ([76724a7](https://github.com/studiobimo/project-template/commit/76724a75e56a1c08333217fcc1d661952797458a))
+* **devtools:** create the repo-health-config-change label in github setup ([#100](https://github.com/studiobimo/project-template/issues/100)) ([f5112b8](https://github.com/studiobimo/project-template/commit/f5112b8455732f13a465cce225bf365de3625040))
+
 ## [0.14.2](https://github.com/studiobimo/project-template/compare/v0.14.1...v0.14.2) (2026-11-16)
 
 
