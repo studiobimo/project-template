@@ -247,6 +247,17 @@ manages and what stays per project.
   make -C .devtools adk-dev                   # all in one process, no GCP needed
   ```
 
+- **`cloudsql`**, a Cloud SQL for PostgreSQL instance per environment, for services on
+  `gcp-infra` (listed before it; `cloudsql` needs it): backups, deletion protection on
+  production, a generated password in Secret Manager, and the runtime accounts let in through
+  the Cloud SQL connector:
+
+  ```sh
+  printf 'gcp-infra\ncloudsql\n' >> .template-profiles
+  make -C .devtools sync
+  make -C .devtools infra-gen cloudsql-gen    # infra/ then infra/cloudsql.tf; then infra-apply
+  ```
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared

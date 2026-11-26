@@ -22,6 +22,7 @@
 file  .devtools/gcp-infra.mk
 file  .devtools/gcp-infra/scaffold.mjs
 file  .devtools/gcp-infra/gen.mjs
+file  .devtools/gcp-infra/write.mjs
 
 block mise.toml       gcp
 file  .devtools/lefthook-gcp-infra.yml

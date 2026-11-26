@@ -1,0 +1,16 @@
+# The cloudsql profile: a Cloud SQL for PostgreSQL instance per environment, for the Cloud Run
+# services of a project on gcp-infra. Opt in with `cloudsql` in the project's .template-profiles,
+# after gcp-infra. Same syntax as .template/manifest, but every path is read from
+# .template/profiles/cloudsql/ rather than from the template's root.
+#
+# It manages the make target (.devtools/cloudsql.mk, which base.mk includes) and the generator
+# in .devtools/cloudsql/, which reuses gcp-infra's. Per project, and not listed: infra/cloudsql.tf,
+# which `make -C .devtools cloudsql-gen` writes where there is none.
+
+requires gcp-infra
+
+file  .devtools/cloudsql.mk
+file  .devtools/cloudsql/scaffold.mjs
+file  .devtools/cloudsql/gen.mjs
+
+block AGENTS.md  cloudsql

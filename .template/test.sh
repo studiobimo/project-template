@@ -297,7 +297,7 @@ for manifest in "${src}"/.template/manifest.*; do
         in_repo "${work}/profile-${name}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
 done
 
-requirers=(gcp)
+requirers=(gcp cloudsql)
 for profile in "${requirers[@]}"; do
     printf '%s\n' "${profile}" >"${work}/profile-${profile}/.template-profiles"
     expect 1 "a project listing ${profile} without gcp-infra has drift, not an error" \
@@ -429,6 +429,18 @@ expect 0 "every template file the generator copies is in the manifest" \
         = "$(grep -c '^file  \.devtools/adk/templates/' "${src}/.template/manifest.adk")"
 expect 0 "and no template carries a comment" \
     test -z "$(grep -rlE '^\s*(//|/\*)' "${src}/.template/profiles/adk/.devtools/adk/templates" --include='*.ts.tpl')"
+
+echo "cloudsql"
+sql="${work}/profile-cloudsql"
+expect 0 "includes its make target" make -s -C "${sql}/.devtools" -n cloudsql-gen
+expect 0 "writes infra/ with gcp-infra's generator first" in_repo "${sql}" mise exec -- node .devtools/gcp-infra/gen.mjs
+expect 0 "then writes an instance for each environment" in_repo "${sql}" mise exec -- node .devtools/cloudsql/gen.mjs
+expect 0 "with deletion protection on production only" \
+    grep -qF 'deletion_protection = each.key == "production"' "${sql}/infra/cloudsql.tf"
+expect 0 "its password in Secret Manager" grep -qF 'google_secret_manager_secret_version' "${sql}/infra/cloudsql.tf"
+expect 0 "and the runtime accounts let in" grep -qF 'roles/cloudsql.client' "${sql}/infra/cloudsql.tf"
+expect 0 "in OpenTofu's canonical format" in_repo "${sql}" mise exec -- tofu -chdir=infra fmt -check
+expect 1 "refuses to overwrite it" in_repo "${sql}" mise exec -- node .devtools/cloudsql/gen.mjs
 
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }
