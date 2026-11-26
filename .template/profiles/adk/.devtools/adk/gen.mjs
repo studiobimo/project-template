@@ -1,37 +1,23 @@
 #!/usr/bin/env node
-import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { basename, dirname, join, relative } from 'node:path'
+import { existsSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { deployEnvsOf, infraFiles } from '../gcp-infra/scaffold.mjs'
 import { kebab } from '../scripts/slug.mjs'
-import { die, inRoot, printNext } from '../typescript/scaffold.mjs'
+import { die, inRoot, printNext, templateFiles } from '../typescript/scaffold.mjs'
 import { GEN, SCAFFOLD } from '../typescript/strings.mjs'
 import { ADK, SAY } from './strings.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const scope = `@${kebab(basename(root))}/`
 const withScope = (text) => text.replaceAll(ADK.scopeToken, scope)
-const { read, run, emit, patch } = inRoot(root)
+const { read, run, emit, add, patch } = inRoot(root)
 
 const typescript = (...args) => run('node', ['.devtools/typescript/gen.mjs', ...args])
 
-function filesUnder(directory) {
-  return readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(directory, entry.name)
-    return entry.isDirectory() ? filesUnder(path) : [path]
-  })
-}
-
-const templateFiles = () => {
-  const base = join(root, ADK.dirs.templates)
-  return Object.fromEntries(
-    filesUnder(base).map((path) => [
-      relative(base, path).slice(0, -ADK.templateSuffix.length),
-      withScope(readFileSync(path, 'utf8'))
-    ])
-  )
-}
+const templatesOf = () =>
+  templateFiles(join(root, ADK.dirs.templates), ADK.templateSuffix, withScope)
 
 function patchPackage(directory, { exports, scripts = {} }) {
   const path = join(root, directory, 'package.json')
@@ -45,9 +31,7 @@ function patchPackage(directory, { exports, scripts = {} }) {
   writeFileSync(path, `${JSON.stringify(manifest, null, 2)}\n`)
 }
 
-const pnpmAdd = (directory, dependencies, flags = []) =>
-  dependencies?.length > 0 &&
-  run('pnpm', ['--filter', `./${directory}`, 'add', ...flags, ...dependencies.map(withScope)])
+const scopedAll = (names = []) => names.map(withScope)
 
 function allowBuilds() {
   const file = 'pnpm-workspace.yaml'
@@ -119,7 +103,7 @@ const kinds = {
     const missingInfra = Object.fromEntries(
       Object.entries(base).filter(([path]) => !existsSync(join(root, path)))
     )
-    emit({ ...templateFiles(), ...missingInfra })
+    emit({ ...templatesOf(), ...missingInfra })
     contractExports()
     allowBuilds()
     knipEntries()
@@ -129,8 +113,8 @@ const kinds = {
         ? `packages/${name}`
         : `${GEN.dirs.services}/${name}`
       patchPackage(directory, spec)
-      pnpmAdd(directory, spec.dependencies)
-      pnpmAdd(directory, spec.devDependencies, ['--save-dev'])
+      add(directory, scopedAll(spec.dependencies))
+      add(directory, scopedAll(spec.devDependencies), ['--save-dev'])
     }
     run('pnpm', ['install'])
     run('make', ['-C', '.devtools', 'adk-graphs'])
