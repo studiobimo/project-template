@@ -30,6 +30,7 @@ file  .devtools/typescript/eslint.js
 file  .devtools/typescript/vitest.ts
 file  .devtools/typescript/Dockerfile
 file  .devtools/typescript/Dockerfile.dockerignore
+file  .devtools/typescript/scaffold.mjs
 file  .devtools/typescript/strings.mjs
 file  .devtools/typescript/gen.mjs
 file  .github/workflows/ci.yml

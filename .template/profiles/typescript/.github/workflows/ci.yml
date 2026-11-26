@@ -2,15 +2,18 @@ name: CI
 
 # The root ci.yml, plus the caches this profile's tools fill. `ci / validate` installs the tools
 # mise.toml pins and the packages pnpm-lock.yaml pins, then runs `make -C .devtools ci`: build,
-# types, ESLint, knip, jscpd, tests, the audit and the Dockerfile's Node check. Turborepo
-# narrows the tests to the packages a pull request changes. It is the target a developer runs,
-# at the same versions, so local and CI results match. Managed by studiobimo/project-template
-# (profile typescript); it replaces the template's own ci.yml for a project that opts in.
+# types, ESLint, knip, jscpd, tests, the audit and whatever a profile adds (the Dockerfile's
+# Node check, a bundle budget, Prettier). Turborepo narrows a service workspace's tests to the
+# packages a pull request changes. It is the target a developer runs, at the same versions, so
+# local and CI results match. Managed by studiobimo/project-template (profile typescript, which
+# profiles built on it share); it replaces the template's own ci.yml for a project that opts in.
 #
 # Nothing here reads a secret, so it is safe on pull requests from forks. Deploying is a
 # hosting profile's job, in its own workflow.
 #
-# The caches are restored on every run and saved only by a push to main or develop.
+# The caches are restored on every run and saved only by a push to main or develop. In a pnpm
+# workspace an app's own node_modules/.cache and node_modules/.tmp are not at the root: list
+# them too, in a project that has APP_DIR.
 
 on:
   push:
@@ -41,8 +44,10 @@ jobs:
       timeout-minutes: 20
       cache-path: |
         node_modules/.cache
+        node_modules/.tmp
         .turbo
         ~/.local/share/pnpm/store
+        ~/.cache/ms-playwright
       cache-key-files: |
         pnpm-lock.yaml
         mise.lock

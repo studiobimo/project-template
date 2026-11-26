@@ -1,11 +1,10 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig, type TestProjectInlineConfiguration } from 'vitest/config'
 
-export const base = defineConfig({
-  test: {
-    include: ['src/**/*.test.ts'],
-    restoreMocks: true,
-    environment: 'node'
-  }
-})
+export const test: NonNullable<TestProjectInlineConfiguration['test']> = {
+  include: ['src/**/*.test.{ts,tsx}'],
+  restoreMocks: true
+}
+
+export const base = defineConfig({ test: { ...test, environment: 'node' } })
 
 export default base

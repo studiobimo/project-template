@@ -1,10 +1,8 @@
 # >>> template:typescript
 # The supply chain. pnpm resolves no version younger than a week, the same cooldown
 # Dependabot keeps, and runs no dependency's install script unless allowBuilds names it:
-# true to run it, false to block it. An unreviewed one fails the install. Add the
-# project's own entries after the end marker; they are still inside allowBuilds. The
-# packages: key goes above the start marker.
+# true to run it, false to block it. An unreviewed one fails the install. The packages: key
+# goes above the start marker, and so does an `allowBuilds:` key with the project's entries
+# (the vite-react-tanstack profile's block ends with one, which a project on it uses).
 minimumReleaseAge: 10080
-
-allowBuilds:
 # <<< template:typescript

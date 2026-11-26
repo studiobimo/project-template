@@ -1,51 +1,23 @@
 #!/usr/bin/env node
-import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-import { GEN, GLYPH, MESSAGES } from './strings.mjs'
+import { kebab } from '../scripts/slug.mjs'
+import { die, printNext, run as runIn, writeNew } from './scaffold.mjs'
+import { GEN, MESSAGES } from './strings.mjs'
 
 const say = MESSAGES.gen
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
-
-const die = (message) => {
-  console.error(`${GLYPH.fail} ${message}`)
-  process.exit(1)
-}
-
-const kebab = (name) =>
-  name
-    .replace(/([a-z0-9])([A-Z])/g, '$1-$2')
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((word) => word.toLowerCase())
-    .join('-')
+const run = (command, args) => runIn(command, args, root)
+const emit = (files) => writeNew(root, files)
 
 const slug = kebab(basename(root))
 const scope = `@${slug}`
 const nodeMajor = read('mise.toml').match(/^node = "(\d+)/m)?.[1] ?? '24'
 const pnpmVersion = read('mise.toml').match(/^pnpm = "([^"]+)"/m)?.[1]
 const json = (value) => `${JSON.stringify(value, null, 2)}\n`
-
-function emit(files) {
-  const taken = Object.keys(files).filter((path) => existsSync(join(root, path)))
-  if (taken.length > 0) die(say.refusing(taken))
-  for (const [path, contents] of Object.entries(files)) {
-    mkdirSync(dirname(join(root, path)), { recursive: true })
-    writeFileSync(join(root, path), contents)
-    console.log(say.created(path))
-  }
-}
-
-function run(command, args) {
-  console.log(say.running(command, args))
-  const { status, error } = spawnSync(command, args, { cwd: root, stdio: 'inherit' })
-  if (error || status !== 0) die(say.failed(command, args))
-}
-
-const printNext = (...lines) => console.log(say.next(lines))
 
 const shared = '../../.devtools/typescript'
 const packageFiles = (name, manifest) => ({
@@ -92,9 +64,9 @@ const rootFiles = {
   }),
   'eslint.config.js': `import { defineConfig } from 'eslint/config'
 
-import { base } from './.devtools/typescript/eslint.js'
+import { node } from './.devtools/typescript/eslint.js'
 
-export default defineConfig([base])
+export default defineConfig([node])
 `,
   'knip.json': json({
     $schema: 'https://unpkg.com/knip@6/schema.json',
