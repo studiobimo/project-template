@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Managed by studiobimo/project-template (profile typescript). Paths, lib, types, module and include are per project or per kind of package: a path here would resolve from this directory.",
+  "compilerOptions": {
+    "target": "es2023",
+    "moduleDetection": "force",
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+
+    "strict": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUncheckedSideEffectImports": true,
+    "erasableSyntaxOnly": true
+  }
+}

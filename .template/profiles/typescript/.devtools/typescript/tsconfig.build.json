@@ -1,0 +1,6 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Managed by studiobimo/project-template (profile typescript). What a package's tsconfig.build.json extends: the package without its tests.",
+  "extends": "./tsconfig.package.json",
+  "exclude": ["${configDir}/src/**/*.test.ts"]
+}

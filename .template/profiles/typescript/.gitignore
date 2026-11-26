@@ -1,0 +1,15 @@
+# >>> template:typescript
+# Node, Turborepo and Vitest
+node_modules/
+dist/
+coverage/
+.turbo/
+*.tsbuildinfo
+*.local
+pnpm-debug.log*
+
+# Local environment; commit an .env.example instead
+.env
+.env.*
+!.env.example
+# <<< template:typescript

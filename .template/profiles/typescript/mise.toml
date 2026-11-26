@@ -1,0 +1,6 @@
+# >>> template:typescript
+# Node is in the base block. pnpm is pinned here; Turborepo needs it in the root package.json
+# too (devEngines.packageManager), and make ci fails when the two differ. Turborepo itself is a
+# devDependency of the root package.json, pinned by pnpm-lock.yaml.
+pnpm = "12.14.0"
+# <<< template:typescript

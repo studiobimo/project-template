@@ -1,0 +1,6 @@
+# >>> template:typescript
+# The indentation the TypeScript and JavaScript here is written with, so editorconfig-checker
+# and the editors agree.
+[*.{js,mjs,cjs,ts,mts}]
+indent_size = 2
+# <<< template:typescript
