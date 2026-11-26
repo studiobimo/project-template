@@ -1,4 +1,6 @@
-export const glyph = { ok: '✔', fail: '✖' }
+import { GLYPH } from '../typescript/strings.mjs'
+
+export const glyph = GLYPH
 export const devtools = 'make -C .devtools'
 export const gen = 'node .devtools/scripts/gen.mjs'
 
@@ -10,11 +12,6 @@ export const genMessages = {
   usageFeature: 'usage: gen.mjs feature <name>',
   usageComponent: 'usage: gen.mjs component <name>',
   usageHook: 'usage: gen.mjs hook <name>',
-  refusing: (paths) => `refusing to overwrite: ${paths.join(', ')}`,
-  created: (path) => `  created ${path}`,
-  running: (command, args) => `\n$ ${command} ${args.join(' ')}`,
-  failed: (command, args) => `${command} ${args[0]} failed`,
-  next: (lines) => `\nNext:\n${lines.map((line) => `  ${line}`).join('\n')}`,
   routeNoSlash: (path) => `a route path starts with /: ${path}`,
   routeBadSegment: (segment, path) => `not a route path segment: '${segment}' in ${path}`,
   noFeature: (name) => `no feature ${name}: run gen.mjs feature ${name} first`,

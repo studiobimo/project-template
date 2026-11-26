@@ -21,10 +21,22 @@
 # `react` of .devtools/vite/eslint.js, the `base` of .devtools/vite/vitest.ts and
 # .devtools/vite/tsconfig.package.json from configs of its own; make finds it by its src/.
 #
-# Adding the profile to a project: `include vite.mk` from .devtools/Makefile, after
-# base.mk, and remove the Makefile's own `clean` recipe. If the project already has the
+# Built on the typescript profile, which owns what any TypeScript workspace shares: the pnpm
+# pin and release cooldown, ci.yml, the strict tsconfig flags, the ESLint and Vitest bases this
+# profile extends, and the make targets install, eslint, knip, audit, ci, check and lock. The
+# lefthook.yml block here is a list item under the typescript block's pre-commit `jobs:`, so
+# it goes directly below that block's end marker. The mise.toml and .github/dependabot.yml
+# blocks only point at the typescript ones: they stay so a project that had the old content in
+# them is updated in place, not left with the pnpm pin and the npm entry twice.
+#
+# Adding the profile to a project: list `typescript` above it in .template-profiles (sync says
+# so when it is missing), `include vite.mk` from .devtools/Makefile, after base.mk (it includes
+# typescript.mk itself), and
+# remove the Makefile's own `clean` recipe. If the project already has the
 # files the blocks below go in, wrap the lines that do the same job in the markers first;
 # without them sync appends a second copy of each block.
+
+requires typescript
 
 file  .devtools/vite.mk
 file  .devtools/vite/vite.ts
@@ -39,7 +51,6 @@ file  .devtools/scripts/affected.sh
 file  .devtools/scripts/gen.mjs
 file  .devtools/scripts/bundle-budget.mjs
 file  .prettierrc.json
-file  .github/workflows/ci.yml
 file  .mcp.json
 file  .devtools/scripts/app-dir.mjs
 file  .devtools/scripts/shadcn-mcp.mjs

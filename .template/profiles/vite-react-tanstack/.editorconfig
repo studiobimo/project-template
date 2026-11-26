@@ -1,5 +1,6 @@
 # >>> template:vite
-# Prettier's indentation, so editorconfig-checker and Prettier agree.
-[*.{js,mjs,cjs,jsx,ts,tsx,css,html}]
+# Prettier's indentation, so editorconfig-checker and Prettier agree. The typescript profile's
+# block covers the scripts.
+[*.{jsx,tsx,css,html}]
 indent_size = 2
 # <<< template:vite

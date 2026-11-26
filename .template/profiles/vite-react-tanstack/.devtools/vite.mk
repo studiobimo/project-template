@@ -1,10 +1,15 @@
 # Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
 # Include it from Makefile, after base.mk, and add the project's own targets (and their
-# .PHONY) there. A hosting profile's .devtools/host/host.mk is included at the end, when
-# there is one: it adds deploy targets, more tsc projects and its own checks, and may move
-# BUNDLE_DIR, since a host's plugin can put the client build somewhere else.
+# .PHONY) there. This profile builds on the typescript profile, so it includes typescript.mk
+# first: install, eslint, knip, audit, ci, check, lock, the pnpm and cache variables and
+# FULL_CI_TARGETS are typescript.mk's, and this file sets what build, typecheck, test and clean
+# run through its *_CMD variables. A hosting profile's .devtools/host/host.mk is included at the
+# end, when there is one: it adds deploy targets, more tsc projects and its own checks, and may
+# move BUNDLE_DIR, since a host's plugin can put the client build somewhere else.
 
-PNPM := cd $(ROOT) && $(MISE_EXEC) pnpm
+ifndef TYPESCRIPT_MK
+include $(ROOT)/.devtools/typescript.mk
+endif
 
 # The app's directory, from the repository's root. A workspace sets APP_DIR in Makefile, above
 # the line that includes this file, or lists every app in APPS when it has more than one. These
@@ -42,17 +47,6 @@ TSC_PROJECTS := .
 AFFECTED_SCRIPT := $(ROOT)/.devtools/scripts/affected.sh
 AFFECTED_REF = $$($(AFFECTED_SCRIPT))
 
-# End-to-end and other browser suites (Playwright, memory and first-load budgets). They cost
-# more than everything else together and a narrowed run cannot say which of them a change can
-# break, so `ci` runs them only when CI_FULL is not false. A project or host appends its own,
-# in Makefile after the include or in a host's .mk: FULL_CI_TARGETS += playwright-install e2e
-FULL_CI_TARGETS ?=
-MSG_FULL_CI_SKIPPED = $(GLYPH_OK) narrowed run (CI_FULL=false): skipped $(strip $(FULL_CI_TARGETS))
-run-full-ci-targets = $(if $(strip $(FULL_CI_TARGETS)),$(if $(filter false,$(CI_FULL)),@echo "$(MSG_FULL_CI_SKIPPED)",@$(MAKE) --no-print-directory $(FULL_CI_TARGETS)),@:)
-
-# Content caches keep a repeated run to the files that changed. They live in node_modules, so
-# git ignores them and `pnpm install` leaves them alone.
-CACHE_DIR := node_modules/.cache
 # Prettier's cache is a file, and its own default is this file in a directory of its own: a
 # hook's plain `prettier --cache` reads it there, so the Makefile must not make the directory a file.
 PRETTIER_CACHE := $(CACHE_DIR)/prettier/.prettier-cache
@@ -95,19 +89,23 @@ deploy-branch:
 		echo "$(GLYPH_FAIL) $(ENV) ships from $(DEPLOY_BRANCH_$(ENV)), not $$branch" >&2; \
 		exit 1; }
 
-.PHONY: deploy-envs install dev build build-app preview test typecheck typecheck-app eslint knip fmt fmt-check budget budget-app audit playwright-install ci check lock clean clean-app deploy-branch
+.PHONY: deploy-envs dev build-app preview typecheck-app fmt fmt-check budget budget-app playwright-install clean-app deploy-branch
 
-install: ## Install the packages pnpm-lock.yaml pins
-	$(PNPM) install --frozen-lockfile
+# What the typescript profile's build, typecheck, test, clean and lock targets run here: once
+# per app, and through scripts/packages.mjs for the packages. Build comes before typecheck: a
+# route added without running the dev server only exists in the route tree once the build has
+# written it. Vite builds, so no package needs scripts for them, and the tests narrow to what a
+# pull request changed through scripts/affected.sh, not through Turborepo.
+BUILD_CMD = $(call each-app,build-app)
+TYPECHECK_CMD = $(call each-app,typecheck-app) && $(PACKAGES) typecheck $(ALL_APPS)
+TEST_CMD = @export AFFECTED_REF="$(AFFECTED_REF)"; $(PACKAGES) test
+CLEAN_CMD = $(call each-app,clean-app)
 
 dev: ## Vite dev server
 	$(APP_PNPM) exec vite
 
 # The router plugin regenerates src/routeTree.gen.ts on every build. If that changed the
 # committed file, the route tree in git was stale: fail, so the new one gets committed.
-build: ## Production build of every app; fails if it had to rewrite a stale src/routeTree.gen.ts
-	$(call each-app,build-app)
-
 build-app:
 	@$(APP_CD) && before="$$(git hash-object src/routeTree.gen.ts 2>/dev/null || true)" \
 		&& $(MISE_EXEC) pnpm exec vite build \
@@ -119,21 +117,8 @@ build-app:
 preview: build-app ## Serve the production build locally
 	$(APP_PNPM) exec vite preview
 
-test: ## Unit tests, once, in every package with a src/; only the affected ones when AFFECTED_BASE is set
-	@export AFFECTED_REF="$(AFFECTED_REF)"; $(PACKAGES) test
-
-typecheck: ## Type-check (incrementally) every app's tsconfig project references, and every other package's tsconfig.json
-	$(call each-app,typecheck-app)
-	$(PACKAGES) typecheck $(ALL_APPS)
-
 typecheck-app:
 	$(APP_PNPM) exec node $(ROOT)/.devtools/scripts/packages.mjs tsc $(TSC_PROJECTS)
-
-eslint: ## ESLint over the whole tree, warnings included
-	$(PNPM) exec eslint --cache --cache-strategy content --cache-location $(CACHE_DIR)/eslint/ --max-warnings=0 .
-
-knip: ## Fail on unused files, exports and dependencies
-	$(PNPM) exec knip
 
 fmt: ## Format the web sources with Prettier
 	$(PNPM) exec prettier --write --cache --cache-strategy content --cache-location $(PRETTIER_CACHE) \
@@ -152,9 +137,6 @@ budget-app:
 		--dir $(call per-app,BUNDLE_DIR) --chunk-kib $(call per-app,BUNDLE_CHUNK_KIB) \
 		--total-kib $(call per-app,BUNDLE_TOTAL_KIB)
 
-audit: ## Fail on high or critical advisories in the packages that ship
-	$(PNPM) audit --prod --audit-level=high
-
 # For a project that runs Playwright. GitHub's runners set CI, and lack the browser's system
 # libraries. The tests run headless, so CI skips the full Chrome that `chromium` also downloads.
 PLAYWRIGHT_BROWSER ?= chromium
@@ -162,18 +144,7 @@ PLAYWRIGHT_BROWSER ?= chromium
 playwright-install: ## Install the browser Playwright drives
 	$(APP_PNPM) exec playwright install $(if $(CI),--with-deps --only-shell) $(PLAYWRIGHT_BROWSER)
 
-# Build before typecheck: a route added without running the dev server only exists in
-# the route tree once the build has written it.
-ci: install build typecheck eslint knip duplication fmt-check test budget audit ## What the CI workflow runs; the browser suites too unless CI_FULL=false
-	$(run-full-ci-targets)
-
-check: lint ci ## Everything CI runs
-
-lock: lock-tools ## Refresh every lockfile after a version change
-	$(PNPM) install
-
-clean: ## Remove build outputs
-	$(call each-app,clean-app)
+CI_STEPS += fmt-check budget
 
 clean-app:
 	$(APP_CD) && rm -rf dist coverage node_modules/.tmp node_modules/.vite
