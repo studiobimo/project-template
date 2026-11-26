@@ -9,6 +9,10 @@
 #                         copy only when the project has none, and never overwrites or
 #                         compares it afterwards. Its absence is drift, whatever it contains.
 #                         `seed <path> required` means the same as for the other kinds
+#   requires <profile>    in a profile's manifest only: this profile needs <profile> listed
+#                         above it in the project's .template-profiles. Sync inserts a missing
+#                         one on its own line above this profile, or moves one listed below it up,
+#                         before applying anything; --check reports either as drift. Not a file
 #
 # Anything not listed is seeded once, by init, and then belongs to the project; a seed entry
 # is for a file that projects created before the template shipped it never got. A project opts

@@ -117,6 +117,21 @@ with_block() {
         marks($0, finish) { inside = 0 }' "$1"
 }
 
+# with_block_after_last_end <file> <block-file>: the file, with the block right after the last
+# template end marker line, where the blocks already in it sit.
+with_block_after_last_end() {
+    awk -v finish="${MARK_END}" -v src="$2" '
+        { lines[NR] = $0 }
+        index($0, finish) > 0 { last = NR }
+        END {
+            for (i = 1; i <= NR; i++) {
+                print lines[i]
+                if (i != last) continue
+                while ((getline line < src) > 0) print line
+            }
+        }' "$1"
+}
+
 # finding_for <markers-state> <name>: what to say about a block whose markers are wrong.
 finding_for() {
     case "$1" in
@@ -241,8 +256,11 @@ sync_block() {
     elif [[ "${state}" == absent ]] && is_unmarked_copy "${path}" "${work}/theirs"; then
         cp "${work}/theirs" "${path}"
         ok "${MSG_SYNC_ADOPTED}" "${path}" "${name}"
+    elif [[ "${state}" == absent ]] && grep -Fq -- "${MARK_END}" "${path}"; then
+        with_block_after_last_end "${path}" "${work}/theirs" >"${work}/merged"
+        cat "${work}/merged" >"${path}"
+        ok "${MSG_SYNC_INSERTED}" "${path}" "${name}"
     elif [[ "${state}" == absent ]]; then
-        # No markers to aim at, so the end of the file is the only safe place.
         { echo; cat "${work}/theirs"; } >>"${path}"
         ok "${MSG_SYNC_APPENDED}" "${path}" "${name}"
     else
@@ -260,23 +278,85 @@ entry_key() {
     if [[ "$1" == block ]]; then echo "block $2 $3"; else echo "file $2"; fi
 }
 
+# first_unmet_requirement: prints "<profile> <dep>" for the first listed profile whose `requires <dep>`
+# is not listed above it, and fails when every requirement is met.
+first_unmet_requirement() {
+    local profile kind dep listed=" "
+    while read -r profile _; do
+        [[ "${profile}" =~ ^[a-z0-9][a-z0-9-]*$ && -f "${from}/${TEMPLATE_MANIFEST}.${profile}" ]] || continue
+        while read -r kind dep _; do
+            [[ "${kind}" == requires ]] || continue
+            [[ "${listed}" != *" ${dep} "* ]] || continue
+            echo "${profile} ${dep}"
+            return 0
+        done < <(entries_of "${from}/${TEMPLATE_MANIFEST}.${profile}")
+        listed+="${profile} "
+    done < <(entries_of "${profiles}")
+    return 1
+}
+
+# place_above <profile> <dep>: the profiles file with <dep> on its own line directly above the first
+# line naming <profile>, and nowhere else. Comments and the other lines stay as they were.
+place_above() {
+    awk -v at="$1" -v dep="$2" '
+        function name(line) {
+            sub(/(^|[ \t])#.*$/, "", line)
+            split(line, words)
+            return words[1]
+        }
+        name($0) == dep { next }
+        name($0) == at && !placed { print dep; placed = 1 }
+        { print }' "${profiles}"
+}
+
+# resolve_requires: makes every `requires <dep>` line hold. A missing profile is inserted, and one
+# listed below its requirer is moved up, one at a time, so what an inserted profile requires is
+# handled too. Sync rewrites .template-profiles; --check does it to a copy and reports each step.
+resolve_requires() {
+    local unmet profile dep steps=0 how
+    while unmet="$(first_unmet_requirement)"; do
+        read -r profile dep <<<"${unmet}"
+        ((++steps < REQUIRES_MAX_STEPS)) || die "${MSG_SYNC_REQUIRES_LOOP}" "${TEMPLATE_PROFILES}" "${profile}" "${dep}"
+        how="${REQUIRES_ADDED}"
+        ! entries_of "${profiles}" | grep -Fxq -- "${dep}" || how="${REQUIRES_MOVED}"
+        if [[ "${mode}" == check ]]; then
+            report "${TEMPLATE_PROFILES}" "$(say "${FINDING_REQUIRES}" "${profile}" "${dep}")"
+        else
+            ok "${MSG_SYNC_REQUIRES_FIXED}" "${TEMPLATE_PROFILES}" "${how}" "${dep}" "${profile}"
+            changed=$((changed + 1))
+        fi
+        place_above "${profile}" "${dep}" >"${work}/placed"
+        cat "${work}/placed" >"${profiles}"
+    done
+}
+
+profiles="${TEMPLATE_PROFILES}"
+if [[ "${mode}" == check ]]; then
+    profiles="${work}/profiles"
+    if [[ -f "${TEMPLATE_PROFILES}" ]]; then cp "${TEMPLATE_PROFILES}" "${profiles}"; else : >"${profiles}"; fi
+fi
+resolve_requires
+
 while read -r profile _; do
     [[ "${profile}" =~ ^[a-z0-9][a-z0-9-]*$ && -f "${from}/${TEMPLATE_MANIFEST}.${profile}" ]] || continue
     while read -r kind path name _; do
+        [[ "${kind}" != requires ]] || continue
         entry_key "${kind}" "${path}" "${name}"
     done < <(entries_of "${from}/${TEMPLATE_MANIFEST}.${profile}")
-done < <(entries_of "${TEMPLATE_PROFILES}") >"${work}/overridden"
+done < <(entries_of "${profiles}") >"${work}/overridden"
 
 layer=base
 
 # apply_manifest <manifest>: sync, or check, every entry in it. An entry is
-# `file <path> [required]`, `seed <path> [required]` or `block <path> <name> [required]`.
+# `file <path> [required]`, `seed <path> [required]` or `block <path> <name> [required]`. A
+# `requires <profile>` line is read by resolve_requires, not here.
 apply_manifest() {
     local kind path name flag _
     while read -r kind path name flag _; do
         case "${kind}" in
             file | seed) flag="${name}"; name="" ;;
             block) [[ -n "${name}" && "${name}" != "${FLAG_REQUIRED}" ]] || die "${MSG_SYNC_NEEDS_NAME}" "${path}" ;;
+            requires) continue ;;
             *) die "${MSG_SYNC_UNKNOWN_ENTRY}" "${kind}" "${path}" ;;
         esac
         [[ -z "${flag}" || "${flag}" == "${FLAG_REQUIRED}" ]] || die "${MSG_SYNC_UNKNOWN_FLAG}" "${flag}" "${path}"
@@ -316,7 +396,7 @@ while read -r profile _; do
         || die "${MSG_SYNC_NO_PROFILE}" "${TEMPLATE_PROFILES}" "${profile}" "${TEMPLATE_MANIFEST}" "${profile}"
     src_root="${from}/${TEMPLATE_DIR}/profiles/${profile}"
     apply_manifest "${from}/${TEMPLATE_MANIFEST}.${profile}"
-done < <(entries_of "${TEMPLATE_PROFILES}")
+done < <(entries_of "${profiles}")
 
 recorded="$(cat "${TEMPLATE_VERSION}" 2>/dev/null || true)"
 
