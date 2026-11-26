@@ -441,6 +441,15 @@ expect 0 "its password in Secret Manager" grep -qF 'google_secret_manager_secret
 expect 0 "and the runtime accounts let in" grep -qF 'roles/cloudsql.client' "${sql}/infra/cloudsql.tf"
 expect 0 "in OpenTofu's canonical format" in_repo "${sql}" mise exec -- tofu -chdir=infra fmt -check
 expect 1 "refuses to overwrite it" in_repo "${sql}" mise exec -- node .devtools/cloudsql/gen.mjs
+expect 1 "keeps ADK sessions in Postgres only with the adk profile" \
+    in_repo "${sql}" mise exec -- node .devtools/cloudsql/gen.mjs adk
+expect 0 "every session template it copies is in the manifest" \
+    test "$(find "${src}/.template/profiles/cloudsql/.devtools/cloudsql/templates" -type f | wc -l | tr -d ' ')" \
+        = "$(grep -c '^file  \.devtools/cloudsql/templates/' "${src}/.template/manifest.cloudsql")"
+expect 0 "and none carries a comment" \
+    test -z "$(grep -rlE '^\s*(//|/\*)' "${src}/.template/profiles/cloudsql/.devtools/cloudsql/templates" --include='*.ts.tpl')"
+expect 0 "the adk worker keeps its sessions in memory until it does" \
+    grep -qF 'new InMemorySessionService()' "${src}/.template/profiles/adk/.devtools/adk/templates/services/worker/src/sessions.ts.tpl"
 
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }

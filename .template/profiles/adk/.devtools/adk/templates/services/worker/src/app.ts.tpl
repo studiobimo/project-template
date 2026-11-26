@@ -1,3 +1,4 @@
+import type { BaseSessionService } from '@google/adk'
 import { prEvent, type PrEvent, type TriageVerdict } from '@scope/contracts'
 import { consumeTopic, type HttpRequest, type Reply } from '@scope/platform'
 
@@ -10,10 +11,11 @@ export type { Judge } from './triage.ts'
 
 export interface WorkerConfig {
   judge: Judge
+  sessions?: BaseSessionService
   onVerdict?: (event: PrEvent, verdict: TriageVerdict) => void
 }
 
-export function createWorker({ judge, onVerdict }: WorkerConfig) {
+export function createWorker({ judge, sessions, onVerdict }: WorkerConfig) {
   const triage = buildTriage(judge)
   return async ({ method, path, body }: HttpRequest): Promise<Reply> => {
     if (method !== 'POST' || path !== WORKER.paths.push) {
@@ -21,7 +23,7 @@ export function createWorker({ judge, onVerdict }: WorkerConfig) {
     }
     try {
       return await consumeTopic(prEvent, body.toString(), async (event) => {
-        const verdict = await runTriage(triage, event)
+        const verdict = await runTriage(triage, event, sessions)
         onVerdict?.(event, verdict)
         return { status: 200, body: JSON.stringify(verdict) }
       })

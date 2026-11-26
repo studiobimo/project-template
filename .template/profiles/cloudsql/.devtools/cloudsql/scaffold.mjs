@@ -104,6 +104,7 @@ output "cloudsql" {
 `
 
 export const CLOUDSQL = {
+  usage: (kinds) => `usage: gen.mjs [${kinds.join('|')}]`,
   next: [
     'make -C .devtools infra-apply   # the instances, databases, users and password secrets',
     'set INSTANCE_CONNECTION_NAME, DB_NAME, DB_USER and DB_PASSWORD (from the secret) on the service in infra/'
