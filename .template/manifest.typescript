@@ -37,6 +37,7 @@ file  .github/workflows/ci.yml
 
 block mise.toml               typescript
 block pnpm-workspace.yaml     typescript
+file  .devtools/lefthook-typescript.yml
 block lefthook.yml            typescript
 block .gitignore              typescript
 block .editorconfig           typescript

@@ -17,14 +17,14 @@
 #
 # The mise.toml, lefthook.yml, .gitignore and .editorconfig blocks are named gcp, as they were
 # when the gcp profile held them, so a project that has them is updated in place. The
-# lefthook.yml block is a list of pre-commit jobs: it goes under the vite profile's block, or
-# under a `pre-commit:` `jobs:` of the project's own.
+# lefthook.yml block only points at .devtools/lefthook-gcp-infra.yml, which holds the hook.
 
 file  .devtools/gcp-infra.mk
 file  .devtools/gcp-infra/scaffold.mjs
 file  .devtools/gcp-infra/gen.mjs
 
 block mise.toml       gcp
+file  .devtools/lefthook-gcp-infra.yml
 block lefthook.yml    gcp
 block .gitignore      gcp
 block .editorconfig   gcp

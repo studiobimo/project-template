@@ -24,10 +24,9 @@
 # Built on the typescript profile, which owns what any TypeScript workspace shares: the pnpm
 # pin and release cooldown, ci.yml, the strict tsconfig flags, the ESLint and Vitest bases this
 # profile extends, and the make targets install, eslint, knip, audit, ci, check and lock. The
-# lefthook.yml block here is a list item under the typescript block's pre-commit `jobs:`, so
-# it goes directly below that block's end marker. The mise.toml and .github/dependabot.yml
-# blocks only point at the typescript ones: they stay so a project that had the old content in
-# them is updated in place, not left with the pnpm pin and the npm entry twice.
+# hooks are in .devtools/lefthook-vite.yml, which the extends glob in lefthook.yml loads. The
+# lefthook.yml, mise.toml and .github/dependabot.yml blocks only point elsewhere: they stay so
+# a project that had the old content in them is updated in place, not left with it twice.
 #
 # Adding the profile to a project: list `typescript` above it in .template-profiles (sync says
 # so when it is missing), `include vite.mk` from .devtools/Makefile, after base.mk (it includes
@@ -57,6 +56,7 @@ file  .devtools/scripts/shadcn-mcp.mjs
 
 block mise.toml               vite
 block pnpm-workspace.yaml     vite
+file  .devtools/lefthook-vite.yml
 block lefthook.yml            vite
 block .gitignore              vite
 block .editorconfig           vite

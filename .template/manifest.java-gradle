@@ -26,4 +26,5 @@ file  .claude/settings.json
 
 block .gitattributes          gradle
 block .github/dependabot.yml  gradle
+file  .devtools/lefthook-java-gradle.yml
 block lefthook.yml            java

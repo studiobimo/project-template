@@ -1,6 +1,3 @@
 # >>> template:gcp
-    # Inside the pre-commit jobs: the vite block's, or a `pre-commit:` `jobs:` of the project's own.
-    - name: tofu-fmt
-      glob: '*.tf'
-      run: mise exec -- tofu fmt -check -diff {staged_files}
+# This profile's hooks are in .devtools/lefthook-gcp-infra.yml.
 # <<< template:gcp

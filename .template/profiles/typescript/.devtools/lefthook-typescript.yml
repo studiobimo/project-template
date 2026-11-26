@@ -1,0 +1,33 @@
+# Managed by studiobimo/project-template (profile typescript); change it there.
+# Loaded by the `extends` glob in lefthook.yml, like every .devtools/lefthook-*.yml. A job name is
+# unique across those files unless a job is meant to change another's. The project's own jobs go
+# in lefthook.yml, under the same hook names.
+#
+# The jobs that run the project's packages skip themselves until `make -C .devtools install`
+# has filled node_modules. That is also why CI's lint job, which installs only the tools in
+# mise.toml, passes over them: ci.yml runs the same checks once it has installed.
+pre-push:
+  jobs:
+    - name: typecheck
+      skip:
+        - run: test ! -d node_modules
+      run: make --no-print-directory -C .devtools typecheck
+
+    - name: vitest
+      skip:
+        - run: test ! -d node_modules
+      run: make --no-print-directory -C .devtools test
+
+pre-commit:
+  # Files pnpm and code generators write.
+  exclude:
+    - 'pnpm-lock.yaml'
+    - '*.gen.ts'
+    - '**/*.gen.ts'
+
+  jobs:
+    - name: eslint
+      glob: '*.{js,mjs,cjs,jsx,ts,tsx,mts}'
+      skip:
+        - run: test ! -d node_modules
+      run: mise exec -- pnpm exec eslint --max-warnings=0 --no-warn-ignored {staged_files}
