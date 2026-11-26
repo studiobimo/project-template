@@ -261,6 +261,20 @@ manages and what stays per project.
   With `adk` listed too, `make -C .devtools cloudsql-adk-gen` moves the worker's ADK sessions
   into this database and wires its environment in `infra/`.
 
+- **`phoenix`**, Arize Phoenix on Cloud Run for the `adk` profile's traces (internal use: Phoenix
+  is under the Elastic License 2.0). It needs `gcp-infra`, `typescript`, `cloudsql` and `adk`,
+  listed before it. Phoenix gets its own database on the Cloud SQL instance, Google sign-in
+  through its own OAuth2 and an API key in Secret Manager. The collector sidecar sends traces
+  to it on a pipeline of their own, and strips prompt and response content from the pipeline to
+  Cloud Trace. An eval worker scores each run on `run-completed` with an ADK judge and posts
+  the score to Phoenix:
+
+  ```sh
+  printf 'gcp-infra\ntypescript\ncloudsql\nadk\nphoenix\n' >> .template-profiles
+  make -C .devtools sync                      # then `include phoenix.mk` after `include adk.mk`
+  make -C .devtools phoenix-gen               # infra/phoenix.tf, services/eval, the collector config
+  ```
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared
