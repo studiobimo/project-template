@@ -54,3 +54,6 @@ drift: ## Show where this repo differs from the template, without changing anyth
 
 github: ## Apply the org's GitHub settings and rulesets to this repo (CHECK=1 only compares; DESC=, ENVS=)
 	@DESC="$(DESC)" ENVS="$(ENVS)" $(CURDIR)/scripts/github-setup.sh $(if $(CHECK),--check) $(if $(REF),--ref $(REF))
+
+# The gcp-infra profile's targets, once it is listed in .template-profiles and synced.
+-include $(ROOT)/.devtools/gcp-infra.mk

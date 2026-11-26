@@ -1,5 +1,7 @@
 import { join } from 'node:path'
 
+import { INFRA, infraFiles } from '../gcp-infra/scaffold.mjs'
+
 const uploadOnly = (path) =>
   path
     .split('/')
@@ -190,79 +192,7 @@ const gcloudignore = (
 ${uploadOnly(join(appDir, 'dist'))}
 `
 
-const tfvars = (slug) => `{
-  "project": "${slug}",
-  "region": "us-central1",
-  "service": "${slug}",
-  "github_repository": "studiobimo/${slug}",
-  "billing_account": "000000-000000-000000",
-  "monthly_budget": 25,
-  "members": []
-}
-`
-
-const tfVersions = `terraform {
-  required_version = ">= 1.10"
-
-  required_providers {
-    google = {
-      source  = "hashicorp/google"
-      version = "~> 8.7"
-    }
-  }
-
-  # \`make -C .devtools infra-bootstrap\` creates the bucket. OpenTofu evaluates the variable
-  # before anything else, so the name follows the project.
-  backend "gcs" {
-    bucket = "\${var.project}-tofu-state"
-    prefix = "tofu"
-  }
-}
-
-provider "google" {
-  project = var.project
-  region  = var.region
-
-  # The budget API bills its quota to a project; with a person's credentials there is none
-  # unless this names it.
-  billing_project       = var.project
-  user_project_override = true
-}
-`
-
-const tfVariables = `# Values in project.auto.tfvars.json, which make reads too.
-
-variable "project" {
-  description = "The GCP project ID. One project per app: the account names below are fixed."
-  type        = string
-}
-
-variable "region" {
-  description = "The region the services, and the images they run, live in."
-  type        = string
-}
-
-variable "service" {
-  description = "The Cloud Run service's name, before -<environment>."
-  type        = string
-}
-
-variable "github_repository" {
-  description = "owner/name of the only repository whose workflows may deploy."
-  type        = string
-}
-
-variable "billing_account" {
-  description = "The billing account the project is on, XXXXXX-XXXXXX-XXXXXX, for its budget."
-  type        = string
-}
-
-variable "monthly_budget" {
-  description = "What the project should cost a month, in the billing account's currency."
-  type        = number
-}
-
-variable "members" {
+const tfService = `variable "members" {
   description = <<-EOT
     Who may open the app, as IAM principals such as user:ana@example.com or
     group:admins@example.com. Empty, the app is public; otherwise Identity-Aware Proxy signs
@@ -271,66 +201,14 @@ variable "members" {
   type        = list(string)
   default     = []
 }
-`
 
-const environmentList = (deployEnvs, quote) =>
-  deployEnvs.map((name) => `${quote}${name}${quote}`).join(', ')
-
-const tfMain = (deployEnvs) => `locals {
-  environments = toset([${environmentList(deployEnvs, '"')}])
-  private      = length(var.members) > 0
+locals {
+  private = length(var.members) > 0
 }
 
-data "google_project" "this" {}
-
-resource "google_project_service" "api" {
-  for_each = toset([
-    "artifactregistry.googleapis.com",
-    "billingbudgets.googleapis.com",
-    "cloudbuild.googleapis.com",
-    "iam.googleapis.com",
-    "iamcredentials.googleapis.com",
-    "iap.googleapis.com",
-    "run.googleapis.com",
-    "sts.googleapis.com",
-  ])
-  service            = each.key
+resource "google_project_service" "iap" {
+  service            = "iap.googleapis.com"
   disable_on_destroy = false
-}
-
-# Where Cloud Build puts the images \`gcloud run deploy --source\` builds. Made here rather
-# than by the first deploy, so old images are cleaned up.
-resource "google_artifact_registry_repository" "source" {
-  repository_id = "cloud-run-source-deploy"
-  location      = var.region
-  format        = "DOCKER"
-
-  cleanup_policies {
-    id     = "keep-recent"
-    action = "KEEP"
-    most_recent_versions {
-      keep_count = 10
-    }
-  }
-
-  cleanup_policies {
-    id     = "delete-old"
-    action = "DELETE"
-    condition {
-      older_than = "2592000s"
-    }
-  }
-
-  depends_on = [google_project_service.api]
-}
-`
-
-const tfService = `# Each environment's service runs as its own account, with no roles: grant one what the
-# service uses, such as a secret or a bucket, and nothing more.
-resource "google_service_account" "runtime" {
-  for_each     = local.environments
-  account_id   = "run-\${each.key}"
-  display_name = "Cloud Run: \${var.service}-\${each.key}"
 }
 
 resource "google_cloud_run_v2_service" "app" {
@@ -347,7 +225,7 @@ resource "google_cloud_run_v2_service" "app" {
   deletion_protection  = each.key == "production"
 
   template {
-    service_account                  = google_service_account.runtime[each.key].email
+    service_account                  = google_service_account.runtime["app-\${each.key}"].email
     labels                           = { app = var.service, environment = each.key }
     max_instance_request_concurrency = 80
     # A request still unanswered after this fails with a 504, rather than holding an
@@ -404,7 +282,7 @@ resource "google_cloud_run_v2_service" "app" {
     ]
   }
 
-  depends_on = [google_project_service.api]
+  depends_on = [google_project_service.api, google_project_service.iap]
 }
 
 # With members, IAP calls the service for them: its agent needs to be allowed to. A project
@@ -429,156 +307,35 @@ resource "google_iap_web_cloud_run_service_iam_member" "members" {
   role                   = "roles/iap.httpsResourceAccessor"
   member                 = each.value.member
 }
-`
 
-const tfBudget = `# Mails the billing account's admins as the month's cost reaches half, nine tenths and all
-# of monthly_budget, and when it is forecast to pass it. It stops nothing.
-resource "google_billing_budget" "project" {
-  billing_account = var.billing_account
-  display_name    = var.service
-
-  budget_filter {
-    projects = ["projects/\${data.google_project.this.number}"]
-  }
-
-  amount {
-    specified_amount {
-      units = tostring(var.monthly_budget)
-    }
-  }
-
-  threshold_rules {
-    threshold_percent = 0.5
-  }
-  threshold_rules {
-    threshold_percent = 0.9
-  }
-  threshold_rules {
-    threshold_percent = 1.0
-  }
-  threshold_rules {
-    threshold_percent = 1.0
-    spend_basis       = "FORECASTED_SPEND"
-  }
-
-  depends_on = [google_project_service.api]
-}
-`
-
-const tfDeploy = (
-  deployEnvs
-) => `# Builds the images, instead of the project's default compute account.
-resource "google_service_account" "builder" {
-  account_id   = "builder"
-  display_name = "Cloud Build: images for Cloud Run"
-}
-
-resource "google_project_iam_member" "builder" {
-  project = var.project
-  role    = "roles/run.builder"
-  member  = google_service_account.builder.member
-}
-
-# Deploys, from GitHub Actions: it uploads the source, starts a build as builder, and rolls
-# the result out as each service's runtime account.
-resource "google_service_account" "deployer" {
-  account_id   = "deployer"
-  display_name = "GitHub Actions: deploys \${var.service}"
-}
-
-resource "google_project_iam_member" "deployer" {
-  for_each = toset(["roles/run.sourceDeveloper", "roles/serviceusage.serviceUsageConsumer"])
-  project  = var.project
-  role     = each.key
-  member   = google_service_account.deployer.member
-}
-
-resource "google_service_account_iam_member" "deployer_acts_as" {
-  for_each = merge(
-    { for env, account in google_service_account.runtime : env => account.name },
-    { builder = google_service_account.builder.name },
-  )
-  service_account_id = each.value
-  role               = "roles/iam.serviceAccountUser"
-  member             = google_service_account.deployer.member
-}
-
-# GitHub Actions signs in with its own OIDC token: no key exists to leak. Only a job in
-# github_repository that names a GitHub environment gets in, so the environments' rules
-# (who may approve production, which branches) decide who deploys.
-resource "google_iam_workload_identity_pool" "github" {
-  workload_identity_pool_id = "github"
-  display_name              = "GitHub Actions"
-  depends_on                = [google_project_service.api]
-}
-
-resource "google_iam_workload_identity_pool_provider" "github" {
-  workload_identity_pool_id          = google_iam_workload_identity_pool.github.workload_identity_pool_id
-  workload_identity_pool_provider_id = "github"
-  display_name                       = "GitHub Actions"
-
-  attribute_mapping = {
-    "google.subject"        = "assertion.sub"
-    "attribute.repository"  = "assertion.repository"
-    "attribute.environment" = "assertion.environment"
-  }
-  attribute_condition = "assertion.repository == '\${var.github_repository}' && assertion.environment in [${environmentList(deployEnvs, "'")}]"
-
-  oidc {
-    issuer_uri = "https://token.actions.githubusercontent.com"
-  }
-}
-
-resource "google_service_account_iam_member" "github_deploys" {
-  service_account_id = google_service_account.deployer.name
-  role               = "roles/iam.workloadIdentityUser"
-  member             = "principalSet://iam.googleapis.com/\${google_iam_workload_identity_pool.github.name}/attribute.repository/\${var.github_repository}"
-}
-`
-
-const tfOutputs = `output "urls" {
+output "urls" {
   description = "Each environment's URL."
   value       = { for env, service in google_cloud_run_v2_service.app : env => service.uri }
 }
-
-# make -C .devtools infra-github copies these two into the repository's variables.
-output "workload_identity_provider" {
-  value = google_iam_workload_identity_pool_provider.github.name
-}
-
-output "deployer" {
-  value = google_service_account.deployer.email
-}
 `
 
-export default ({ slug, appDir, repo, deployEnvs }) => ({
-  dependencies: ['hono', '@hono/node-server'],
-  devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
-  next: [
-    'edit infra/project.auto.tfvars.json   # the GCP project, region, repository, billing account, budget',
-    'make -C .devtools infra-bootstrap     # once: the bucket for OpenTofu state',
-    'make -C .devtools infra-apply         # the services, their accounts, Workload Identity',
-    'make -C .devtools infra-github        # the repository variables deploy.yml signs in with',
-    `make -C .devtools deploy ENV=${deployEnvs[0]} # <service>-${deployEnvs[0]}, from this machine`
-  ],
-  files: {
-    'server/tsconfig.json': serverTsconfig(repo),
-    'server/app.ts': serverApp,
-    'server/app.test.ts': serverAppTest,
-    'server/site.ts': serverSite,
-    'server/site.test.ts': serverSiteTest,
-    'server/index.ts': serverIndex
-  },
-  repoFiles: {
-    Dockerfile: dockerfile(appDir),
-    '.gcloudignore': gcloudignore(appDir),
-    'infra/project.auto.tfvars.json': tfvars(slug),
-    'infra/versions.tf': tfVersions,
-    'infra/variables.tf': tfVariables,
-    'infra/main.tf': tfMain(deployEnvs),
-    'infra/service.tf': tfService,
-    'infra/budget.tf': tfBudget,
-    'infra/deploy.tf': tfDeploy(deployEnvs),
-    'infra/outputs.tf': tfOutputs
+export default (project) => {
+  const { appDir, repo, deployEnvs } = project
+  return {
+    dependencies: ['hono', '@hono/node-server'],
+    devDependencies: repo === '.' ? [] : ['hono', '@hono/node-server'],
+    next: [
+      ...INFRA.next,
+      `make -C .devtools deploy ENV=${deployEnvs[0]} # <service>-${deployEnvs[0]}, from this machine`
+    ],
+    files: {
+      'server/tsconfig.json': serverTsconfig(repo),
+      'server/app.ts': serverApp,
+      'server/app.test.ts': serverAppTest,
+      'server/site.ts': serverSite,
+      'server/site.test.ts': serverSiteTest,
+      'server/index.ts': serverIndex
+    },
+    repoFiles: {
+      Dockerfile: dockerfile(appDir),
+      '.gcloudignore': gcloudignore(appDir),
+      ...infraFiles(project, { members: [] }),
+      'infra/service.tf': tfService
+    }
   }
-})
+}

@@ -3,10 +3,11 @@
 ## Hosting: Google Cloud Run
 
 The `gcp` profile keeps this section, `.devtools/host/` and `deploy.yml` in step with the
-template. The shared Vite, Vitest, ESLint and make configs load their Cloud Run parts from
-there, so the project's own config files never name the host. `Dockerfile`, `.gcloudignore`,
-`server/` and `infra/` are the project's. In a workspace `server/` sits in `APP_DIR` and the
-others stay at the root, where the `Dockerfile` copies `<APP_DIR>/dist` into the image.
+template, on top of the `gcp-infra` profile, which has to be listed before it. The shared
+Vite, Vitest, ESLint and make configs load their Cloud Run parts from there, so the project's
+own config files never name the host. `Dockerfile`, `.gcloudignore`, `server/` and `infra/`
+are the project's. In a workspace `server/` sits in `APP_DIR` and the others stay at the root,
+where the `Dockerfile` copies `<APP_DIR>/dist` into the image.
 
 - **One service serves the app.** `server/site.ts` answers `/api/*` with the Hono app in
   `server/app.ts` and serves the client from `dist/client`; any other path gets
@@ -21,32 +22,22 @@ others stay at the root, where the `Dockerfile` copies `<APP_DIR>/dist` into the
   image's exact tag onto distroless, and `make -C .devtools check` fails unless that tag
   is the `node` in `mise.toml`. Bump them in one commit: a Dependabot PR for the image
   needs the `mise.toml` bump and `make -C .devtools lock` pushed onto it.
-- **Infrastructure is OpenTofu, in `infra/`.** One GCP project per app, named in
-  `infra/project.auto.tfvars.json` with the region and service name, which make reads too.
-  It creates `<service>-development` and `<service>-production`, or one per entry of
-  `DEPLOY_ENVS` in `.devtools/Makefile` when it was set before `gen.mjs` wrote `infra/`
-  (`DEPLOY_ENVS := production` for a project with no development or `develop`), each running
-  as its own account with no roles; grant one what its service uses, in `infra/`. Environment
-  variables and secrets go on the service there too, never in the image. Requests time
+- **The services are in `infra/service.tf`:** `<service>-development` and
+  `<service>-production`, each running as its runtime account from `gcp-infra`. Requests time
   out after 60 seconds, production runs at most 3 instances and development 2, and a new
-  revision gets traffic only once `/api/health` answers. A budget on the billing account
-  mails its admins as the month nears `monthly_budget`; it warns, the caps limit. Applying
-  it takes Billing Account Costs Manager, or Administrator, on that account.
+  revision gets traffic only once `/api/health` answers.
 - **Public unless `members` is set.** Apps are public and development sends
   `X-Robots-Tag: noindex`. For an admin tool, list who may open it as `members` in
   `infra/project.auto.tfvars.json`: Identity-Aware Proxy then signs people in with Google
   and lets only them through, on both services. Change it with
-  `make -C .devtools infra-plan` and `infra-apply`; the state is in a GCS bucket that
-  `infra-bootstrap` creates once. Commit `infra/.terraform.lock.hcl`, which pins the
-  provider; bump it by hand with `tofu init -upgrade`, a week after its release.
+  `make -C .devtools infra-plan` and `infra-apply`.
 - **Deploys.** `make -C .devtools deploy ENV=development|production` builds, then has Cloud
   Build make the image and Cloud Run roll it out. It refuses to run from any branch but the
   one its environment ships from: `develop` for development, `main` for production.
   `deploy.yml` runs the same target: on a push to `develop` to development, and to
   production when `release.yml` calls it for a release. A run from Actions defaults to the
-  first environment in `DEPLOY_ENVS`. It signs in with Workload Identity Federation, no key,
-  and only jobs in a GitHub environment named after one of its environments can. `make -C .devtools infra-github` sets the two repository variables it
-  needs.
+  first environment in `DEPLOY_ENVS`. It signs in with the Workload Identity Federation that
+  `gcp-infra` sets up.
 - **Server tests** sit beside the code as `server/**/*.test.ts` and call
   `app.request(path)` in Node.
 - **One schema per concept** holds across the boundary: a route validates its input with

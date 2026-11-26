@@ -187,17 +187,33 @@ manages and what stays per project.
   node .devtools/scripts/gen.mjs host         # wrangler.jsonc and worker/, then the packages
   ```
 
-- **`gcp`**, the same for Google Cloud Run: one service, a Hono server on Node bundled into
-  `dist/server`, serves the client and answers `/api/*`. OpenTofu in `infra/` sets up the
-  development and production services, their accounts and Workload Identity Federation, and
-  a deploy workflow ships `develop` to development and each release to production, with no
-  key stored anywhere. `DEPLOY_ENVS := production` drops development here too:
+- **`gcp-infra`**, the Google Cloud project that every Cloud Run service shares, with no
+  other profile needed: OpenTofu in `infra/` and its state bucket, Workload Identity Federation
+  for the deploy workflow, the project's APIs (Cloud Run, Artifact Registry, Secret Manager,
+  Pub/Sub, Vertex AI, Telemetry, Cloud Trace, Monitoring, Logging), a runtime account per
+  service and environment that can write traces and metrics, and a budget.
+  `DEPLOY_ENVS := production` in `.devtools/Makefile` drops development:
 
   ```sh
-  echo gcp >> .template-profiles
+  echo gcp-infra >> .template-profiles
+  make -C .devtools sync
+  make -C .devtools infra-gen                 # a first infra/; then infra-bootstrap, infra-apply, infra-github
+  ```
+
+- **`gcp`**, the Node and Vite part, a hosting profile like `cloudflare`: one service, a Hono
+  server on Node bundled into `dist/server`, serves the client and answers `/api/*`. It builds
+  on `gcp-infra`, which is listed before it (`gcp` needs it), and adds the services to
+  `infra/`, the make targets and a deploy workflow that ships `develop` to development and
+  each release to production, with no key stored anywhere:
+
+  ```sh
+  printf 'gcp-infra\ngcp\n' >> .template-profiles   # after vite-react-tanstack
   make -C .devtools sync
   node .devtools/scripts/gen.mjs host         # server/, infra/ and the Dockerfile, then the packages
   ```
+
+  A project that had `gcp` before `gcp-infra` existed lists `gcp-infra` above it and syncs: the
+  blocks it moves keep their names, so they are updated in place.
 
 ## Tool versions
 
