@@ -53,6 +53,25 @@ file  .devtools/adk/templates/services/ingress/src/index.ts.tpl
 file  .devtools/adk/templates/services/ingress/src/signatures.test.ts.tpl
 file  .devtools/adk/templates/services/ingress/src/signatures.ts.tpl
 file  .devtools/adk/templates/services/ingress/src/strings.ts.tpl
+file  .devtools/adk/templates/services/worker/evals/cases.json.tpl
+file  .devtools/adk/templates/services/worker/src/app.ts.tpl
+file  .devtools/adk/templates/services/worker/src/claude.ts.tpl
+file  .devtools/adk/templates/services/worker/src/eval-main.ts.tpl
+file  .devtools/adk/templates/services/worker/src/eval.ts.tpl
+file  .devtools/adk/templates/services/worker/src/graph.ts.tpl
+file  .devtools/adk/templates/services/worker/src/graphs-main.ts.tpl
+file  .devtools/adk/templates/services/worker/src/index.ts.tpl
+file  .devtools/adk/templates/services/worker/src/models.ts.tpl
+file  .devtools/adk/templates/services/worker/src/scripted-llm.ts.tpl
+file  .devtools/adk/templates/services/worker/src/strings.ts.tpl
+file  .devtools/adk/templates/services/worker/src/triage.ts.tpl
+file  .devtools/adk/templates/services/worker/src/worker.test.ts.tpl
+file  .devtools/adk/templates/services/worker/src/workflows.ts.tpl
+file  .devtools/adk/templates/packages/local/src/collector.test.ts.tpl
+file  .devtools/adk/templates/packages/local/src/local.test.ts.tpl
+file  .devtools/adk/templates/packages/local/src/local.ts.tpl
+file  .devtools/adk/templates/packages/local/src/main.ts.tpl
+file  .devtools/adk/templates/packages/local/src/strings.ts.tpl
 
 block .editorconfig  adk
 block AGENTS.md  adk
