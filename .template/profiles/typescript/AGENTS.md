@@ -42,7 +42,8 @@ services/<name>/      one deployable service each; its entry point is src/index.
   declare the same payload twice.
 - **Scaffold with the generator:** `node .devtools/typescript/gen.mjs workspace` writes the
   root files and `packages/contracts` and installs their packages;
-  `node .devtools/typescript/gen.mjs service <name>` adds `services/<name>`.
+  `node .devtools/typescript/gen.mjs service <name>` adds `services/<name>` and
+  `node .devtools/typescript/gen.mjs package <name>` adds `packages/<name>`.
 - **A new package** needs a `package.json` with `build`, `typecheck` and `test` scripts, a
   `tsconfig.json` extending `../../.devtools/typescript/tsconfig.package.json` and a
   `tsconfig.build.json` extending `../../.devtools/typescript/tsconfig.build.json`.

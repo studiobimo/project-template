@@ -418,6 +418,18 @@ expect 1 "and no Cloud Run service" grep -rqF google_cloud_run_v2_service "${inf
 expect 1 "and no members, which belong to the hosting profile" grep -qF members "${infra}/infra/project.auto.tfvars.json"
 expect 1 "refuses to overwrite it" in_repo "${infra}" mise exec -- node .devtools/gcp-infra/gen.mjs
 
+echo "adk"
+agents="${work}/profile-adk"
+adk_listed_after_what_it_requires() { [[ "$(<"${agents}/.template-profiles")" == $'gcp-infra\ntypescript\nadk' ]]; }
+expect 0 "the adk profile is listed after gcp-infra and typescript, which it requires" adk_listed_after_what_it_requires
+expect 1 "its generator needs the typescript workspace first" \
+    in_repo "${agents}" mise exec -- node .devtools/adk/gen.mjs agents
+expect 0 "every template file the generator copies is in the manifest" \
+    test "$(find "${src}/.template/profiles/adk/.devtools/adk/templates" -type f | wc -l | tr -d ' ')" \
+        = "$(grep -c '^file  \.devtools/adk/templates/' "${src}/.template/manifest.adk")"
+expect 0 "and no template carries a comment" \
+    test -z "$(grep -rlE '^\s*(//|/\*)' "${src}/.template/profiles/adk/.devtools/adk/templates" --include='*.ts.tpl')"
+
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }
 expect 1 "fails before anything is built" budget --dir nothing-here
