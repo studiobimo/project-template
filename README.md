@@ -134,6 +134,19 @@ manages and what stays per project.
 - **`java-gradle`**, for the Fabric and NeoForge mods: the Gradle convention plugins, CI, the
   Gradle Makefile targets and hooks, and the Dependabot and `.gitattributes` entries that go
   with them.
+- **`typescript`**, for TypeScript services and libraries in one pnpm workspace: Turborepo under
+  make (`turbo run` for build, typecheck and test, `--affected` for narrowed CI), the shared
+  tsconfig, ESLint and Vitest configs, one Dockerfile for every service with Node pinned to
+  `mise.toml`'s, and a generator that scaffolds `packages/contracts` (zod schemas and the
+  `defineTopic` helper that validates at publish and at consume) and a first service:
+
+  ```sh
+  echo typescript >> .template-profiles
+  make -C .devtools sync                      # then `include typescript.mk` in .devtools/Makefile
+  node .devtools/typescript/gen.mjs workspace
+  node .devtools/typescript/gen.mjs service <name>
+  ```
+
 - **`vite-react-tanstack`**, for a React app built with Vite, file-based TanStack Router,
   TanStack Query and Tailwind: the shared Vite, Vitest, ESLint and TypeScript configs that the
   project's own config files extend, Prettier, the Makefile targets, hooks and CI, pnpm pinned

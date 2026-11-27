@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  "//": "Managed by studiobimo/project-template (profile typescript). What a Node package's tsconfig.json extends. Sources import each other with their .ts extension; tsc rewrites it to .js in dist/.",
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "module": "nodenext",
+    "lib": ["ES2023"],
+    "types": ["node"],
+    "rewriteRelativeImportExtensions": true,
+    "declaration": true,
+    "rootDir": "${configDir}/src",
+    "outDir": "${configDir}/dist"
+  },
+  "include": ["${configDir}/src"]
+}

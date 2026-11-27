@@ -1,0 +1,43 @@
+# The typescript profile: TypeScript services and libraries in one pnpm workspace, built and
+# tested by Turborepo under make. Opt in with `typescript` in the project's .template-profiles.
+# Same syntax as .template/manifest, but every path is read from .template/profiles/typescript/
+# rather than from the template's root.
+#
+# make stays the entry point for CI and hooks: .devtools/typescript.mk runs `turbo run` for
+# build, typecheck and test, and `make test` narrows to the packages a pull request changed with
+# `turbo --affected` when AFFECTED_BASE is set. ESLint, knip and the audit run once from the root.
+#
+# Per project, and not listed: package.json, turbo.json, eslint.config.js, knip.json,
+# pnpm-workspace.yaml's packages: key, and every package under packages/ and services/. Each
+# extends or imports the shared half in .devtools/typescript/, and
+# `node .devtools/typescript/gen.mjs workspace` writes a first version of the root files and of
+# packages/contracts, the one place message schemas live; `gen.mjs service <name>` adds a service.
+#
+# Every service builds into an image with the one Dockerfile in .devtools/typescript/:
+# `make -C .devtools image SERVICE=services/<name>`. Its Node is the exact release mise.toml
+# pins, and `make ci` fails when the two differ.
+#
+# Adding the profile to a project: `include typescript.mk` from .devtools/Makefile, after
+# base.mk, and remove the Makefile's own `clean` recipe. If the project already has the files
+# the blocks below go in, wrap the lines that do the same job in the markers first; without
+# them sync appends a second copy of each block.
+
+file  .devtools/typescript.mk
+file  .devtools/typescript/tsconfig.base.json
+file  .devtools/typescript/tsconfig.package.json
+file  .devtools/typescript/tsconfig.build.json
+file  .devtools/typescript/eslint.js
+file  .devtools/typescript/vitest.ts
+file  .devtools/typescript/Dockerfile
+file  .devtools/typescript/Dockerfile.dockerignore
+file  .devtools/typescript/strings.mjs
+file  .devtools/typescript/gen.mjs
+file  .github/workflows/ci.yml
+
+block mise.toml               typescript
+block pnpm-workspace.yaml     typescript
+block lefthook.yml            typescript
+block .gitignore              typescript
+block .editorconfig           typescript
+block .github/dependabot.yml  typescript
+block AGENTS.md               typescript
