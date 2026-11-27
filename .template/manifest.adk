@@ -35,6 +35,24 @@ file  .devtools/adk/templates/infra/collector.yaml.tpl
 file  .devtools/adk/templates/infra/pubsub.tf.tpl
 file  .devtools/adk/templates/infra/secrets.tf.tpl
 file  .devtools/adk/templates/infra/service.tf.tpl
+file  .devtools/adk/templates/packages/contracts/src/contracts.test.ts.tpl
+file  .devtools/adk/templates/packages/contracts/src/pr-event.ts.tpl
+file  .devtools/adk/templates/packages/contracts/src/push.ts.tpl
+file  .devtools/adk/templates/packages/contracts/src/webhooks.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/bus.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/http.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/http.test.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/index.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/memory-bus.test.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/memory-bus.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/strings.ts.tpl
+file  .devtools/adk/templates/packages/platform/src/telemetry.ts.tpl
+file  .devtools/adk/templates/services/ingress/src/app.test.ts.tpl
+file  .devtools/adk/templates/services/ingress/src/app.ts.tpl
+file  .devtools/adk/templates/services/ingress/src/index.ts.tpl
+file  .devtools/adk/templates/services/ingress/src/signatures.test.ts.tpl
+file  .devtools/adk/templates/services/ingress/src/signatures.ts.tpl
+file  .devtools/adk/templates/services/ingress/src/strings.ts.tpl
 
 block .editorconfig  adk
 block AGENTS.md  adk
