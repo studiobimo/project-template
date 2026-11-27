@@ -225,6 +225,66 @@ printf 'nope' >.template-profiles
 expect 2 "even on a last line with no newline" "${psync[@]}" --check
 rm .template-profiles fixture.txt cfg.yml
 
+printf 'requires fixture-dep\nfile   fixture.txt\n' >"${prof}/.template/manifest.fixture"
+printf 'file   fixture-dep.txt\n' >"${prof}/.template/manifest.fixture-dep"
+mkdir -p "${prof}/.template/profiles/fixture-dep"
+printf 'the dependency\n' >"${prof}/.template/profiles/fixture-dep/fixture-dep.txt"
+printf 'fixture\n' >.template-profiles
+expect 1 "a profile that requires one the project does not list is drift" "${psync[@]}" --check
+"${psync[@]}" --check >"${work}/requires" 2>&1 || true
+expect 0 "the finding names both profiles" grep -qx '✖ .template-profiles: profile fixture requires fixture-dep listed above it' "${work}/requires"
+expect 0 "and --check leaves .template-profiles alone" test "$(cat .template-profiles)" = fixture
+expect 0 "sync adds the missing profile instead of stopping" "${psync[@]}"
+expect 0 "above the profile that requires it" test "$(cat .template-profiles)" = "$(printf 'fixture-dep\nfixture')"
+expect 0 "and brings in both profiles' files" test -f fixture.txt -a -f fixture-dep.txt
+expect 0 "and the copy is in step" "${psync[@]}" --check
+rm -f fixture.txt fixture-dep.txt
+printf '# opted in\n\nfixture # the one\nother\n' >.template-profiles
+printf 'file   other.txt\n' >"${prof}/.template/manifest.other"
+mkdir -p "${prof}/.template/profiles/other"
+printf 'other\n' >"${prof}/.template/profiles/other/other.txt"
+expect 0 "sync inserts into a file with comments and other profiles" "${psync[@]}"
+expect 0 "directly above the requirer, keeping the rest" \
+    test "$(cat .template-profiles)" = "$(printf '# opted in\n\nfixture-dep\nfixture # the one\nother')"
+printf 'fixture\nfixture-dep\n' >.template-profiles
+expect 1 "a required profile listed below the one needing it is drift" "${psync[@]}" --check
+expect 0 "and --check does not move it" test "$(cat .template-profiles)" = "$(printf 'fixture\nfixture-dep')"
+expect 0 "sync moves it above" "${psync[@]}"
+expect 0 "without duplicating it" test "$(cat .template-profiles)" = "$(printf 'fixture-dep\nfixture')"
+expect 0 "and the copy is in step" "${psync[@]}" --check
+printf 'requires fixture-dep\nfile   fixture.txt\n' >"${prof}/.template/manifest.fixture"
+printf 'requires fixture-chain\nfile   fixture-dep.txt\n' >"${prof}/.template/manifest.fixture-dep"
+printf 'file   fixture-chain.txt\n' >"${prof}/.template/manifest.fixture-chain"
+mkdir -p "${prof}/.template/profiles/fixture-chain"
+printf 'chain\n' >"${prof}/.template/profiles/fixture-chain/fixture-chain.txt"
+printf 'fixture\n' >.template-profiles
+expect 0 "sync also inserts what an inserted profile requires" "${psync[@]}"
+expect 0 "in dependency order" test "$(cat .template-profiles)" = "$(printf 'fixture-chain\nfixture-dep\nfixture')"
+printf 'requires fixture\nfile   fixture-chain.txt\n' >"${prof}/.template/manifest.fixture-chain"
+expect 2 "profiles that require each other are an error" "${psync[@]}"
+printf 'file   fixture-chain.txt\n' >"${prof}/.template/manifest.fixture-chain"
+printf 'requires fixture-dep\nfile   fixture.txt\n' >"${prof}/.template/manifest.fixture"
+printf 'file   fixture-dep.txt\n' >"${prof}/.template/manifest.fixture-dep"
+rm -f .template-profiles fixture.txt fixture-dep.txt fixture-chain.txt other.txt
+
+printf 'block  order.toml  extra\nblock  order.yml  extra\nblock  plain.txt  extra\n' >"${prof}/.template/manifest.fixture"
+printf '# >>> template:extra\npnpm = "1"\n# <<< template:extra\n' >"${prof}/.template/profiles/fixture/order.toml"
+printf '# >>> template:extra\n- npm\n# <<< template:extra\n' >"${prof}/.template/profiles/fixture/order.yml"
+printf '# >>> template:extra\nx\n# <<< template:extra\n' >"${prof}/.template/profiles/fixture/plain.txt"
+printf '# >>> template:base\n[tools]\n# <<< template:base\n# >>> template:pointer\n# see extra\n# <<< template:pointer\n[env]\nX = "1"\n' >order.toml
+printf '# >>> template:base\n- a\n# <<< template:base\n    target-branch: dev\n' >order.yml
+printf 'mine\n' >plain.txt
+printf 'fixture\n' >.template-profiles
+expect 0 "sync adds a missing block to files with and without markers" "${psync[@]}"
+expect 0 "a block lands right after the last template block, before the next table" \
+    test "$(cat order.toml)" = "$(printf '# >>> template:base\n[tools]\n# <<< template:base\n# >>> template:pointer\n# see extra\n# <<< template:pointer\n# >>> template:extra\npnpm = "1"\n# <<< template:extra\n[env]\nX = "1"')"
+expect 0 "and before a project line that follows the last block" \
+    test "$(cat order.yml)" = "$(printf '# >>> template:base\n- a\n# <<< template:base\n# >>> template:extra\n- npm\n# <<< template:extra\n    target-branch: dev')"
+expect 0 "a file with no markers still gets it appended" test "$(cat plain.txt)" = "$(printf 'mine\n\n# >>> template:extra\nx\n# <<< template:extra')"
+expect 0 "and the copy is in step" "${psync[@]}" --check
+rm -f .template-profiles order.toml order.yml plain.txt
+printf 'file   fixture.txt\n' >"${prof}/.template/manifest.fixture"
+
 # Every profile the template ships: each file it lists exists, each block has its markers.
 in_repo() { (cd "$1" && shift && "$@"); }
 for manifest in "${src}"/.template/manifest.*; do
@@ -520,7 +580,7 @@ git -C "${aff}" reset --quiet --hard HEAD~1
 echo '// edit' >>"${aff}/src/features/a.ts"
 git -C "${aff}" checkout --quiet -- .
 
-full_ci() { make -n --no-print-directory -C "${shop}/.devtools" -f "$1" ci "${@:2}"; }
+full_ci() { env -u CI_FULL -u AFFECTED_BASE make -n --no-print-directory -C "${shop}/.devtools" -f "$1" ci "${@:2}"; }
 printf 'include base.mk\ninclude vite.mk\nFULL_CI_TARGETS += e2e budget-memory\ne2e budget-memory:\n\t@echo $@\n' \
     >"${shop}/.devtools/full.mk"
 printf 'include base.mk\ninclude vite.mk\n' >"${shop}/.devtools/plain.mk"
