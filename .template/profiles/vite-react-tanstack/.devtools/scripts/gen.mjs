@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { basename, dirname, join, matchesGlob, relative } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { parseArgs } from 'node:util'
 
 import { appDirOf, readFromRoot } from './app-dir.mjs'
-import { genMessages as say, genNext, glyph } from './strings.mjs'
+import { die, printNext, run as runIn, writeNew } from '../typescript/scaffold.mjs'
+import { kebab, words } from './slug.mjs'
+import { genMessages as say, genNext } from './strings.mjs'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
 
@@ -34,18 +36,6 @@ function workspaceListsApp() {
   )
 }
 
-const die = (message) => {
-  console.error(`${glyph.fail} ${message}`)
-  process.exit(1)
-}
-
-const words = (name) =>
-  name
-    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
-    .split(/[^a-zA-Z0-9]+/)
-    .filter(Boolean)
-    .map((word) => word.toLowerCase())
-const kebab = (name) => words(name).join('-')
 const pascal = (name) =>
   words(name)
     .map((word) => word[0].toUpperCase() + word.slice(1))
@@ -58,15 +48,9 @@ const camel = (name) => {
 function emit(appFiles, repoFiles = {}) {
   const files = { ...repoFiles }
   for (const [path, contents] of Object.entries(appFiles)) files[join(appDir, path)] = contents
-  const taken = Object.keys(files).filter((path) => existsSync(join(root, path)))
-  if (taken.length > 0) die(say.refusing(taken))
-  for (const [path, contents] of Object.entries(files)) {
-    mkdirSync(dirname(join(root, path)), { recursive: true })
-    writeFileSync(join(root, path), contents)
-    console.log(say.created(path))
-  }
-  format(Object.keys(files))
-  return Object.keys(files)
+  const paths = writeNew(root, files)
+  format(paths)
+  return paths
 }
 
 function format(paths) {
@@ -77,11 +61,7 @@ function format(paths) {
   }
 }
 
-function run(command, args) {
-  console.log(say.running(command, args))
-  const { status, error } = spawnSync(command, args, { cwd: app, stdio: 'inherit' })
-  if (error || status !== 0) die(say.failed(command, args))
-}
+const run = (command, args) => runIn(command, args, app)
 
 function readmeDescription(readme) {
   const [, body = ''] = readme.match(/^# .+\n([\s\S]*)/m) ?? []
@@ -136,8 +116,6 @@ function languages() {
     : []
   return found.length > 0 ? found.map((entry) => entry.name) : ['en']
 }
-
-const next = (...lines) => console.log(say.next(lines))
 
 function routeOf(path) {
   if (!path.startsWith('/')) die(say.routeNoSlash(path))
@@ -617,7 +595,7 @@ export const Route = createFileRoute('${id}')({
 `
       })
     }
-    next(genNext.route)
+    printNext(genNext.route)
   },
 
   feature([name]) {
@@ -675,7 +653,7 @@ export function ${P}Page() {
 `,
       [`${dir}/${k}-page.test.tsx`]: featurePageTest(k, P, c)
     })
-    next(genNext.feature(k))
+    printNext(genNext.feature(k))
   },
 
   component([name]) {
@@ -742,12 +720,12 @@ describe('use${P}', () => {
     }
     const written = emit(host.files, host.repoFiles)
     if (!installing) {
-      next(genNext.hostNoInstall, ...host.next)
+      printNext(genNext.hostNoInstall, ...host.next)
       return
     }
     install(host.dependencies, [], host.devDependencies)
     format(written)
-    next(genNext.check, ...host.next)
+    printNext(genNext.check, ...host.next)
   },
 
   async app(_, { install: installing }) {
@@ -774,7 +752,7 @@ describe('use${P}', () => {
     )
 
     if (!installing) {
-      next(genNext.appNoInstall(appDir))
+      printNext(genNext.appNoInstall(appDir))
       return
     }
     install([...appDependencies, ...host.dependencies], appDevDependencies, [
@@ -783,7 +761,7 @@ describe('use${P}', () => {
     ])
     run('pnpm', ['exec', 'vite', 'build'])
     format(written)
-    next(genNext.check, genNext.shadcn(appDir), genNext.commit, ...host.next)
+    printNext(genNext.check, genNext.shadcn(appDir), genNext.commit, ...host.next)
   }
 }
 

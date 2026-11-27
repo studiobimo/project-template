@@ -428,7 +428,7 @@ expect 1 "fails a chunk over its budget" budget --chunk-kib 0
 echo "vite-react-tanstack in an app directory"
 generated() {
     copy "$1"
-    printf 'vite-react-tanstack\n%s\n' "${2:-cloudflare}" >"$1/.template-profiles"
+    printf 'typescript\nvite-react-tanstack\n%s\n' "${2:-cloudflare}" >"$1/.template-profiles"
     in_repo "$1" .devtools/scripts/template-sync.sh --from "${src}" --ref v9.9.9 >/dev/null
 }
 gen_in() { (cd "$1" && shift && mise exec -- node .devtools/scripts/gen.mjs "$@"); }

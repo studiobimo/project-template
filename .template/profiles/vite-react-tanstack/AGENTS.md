@@ -5,7 +5,9 @@
 The `vite-react-tanstack` profile keeps this section, the shared configs in `.devtools/vite/`
 and the scripts beside them in step with the template. The project's own `vite.config.ts`,
 `vitest.config.ts`, `eslint.config.js` and `tsconfig*.json` import or extend those configs and
-add only what is particular to it.
+add only what is particular to it. It builds on the `typescript` profile, which keeps what any
+workspace shares: pnpm and its pin, the strict tsconfig flags, the ESLint and Vitest bases these
+configs extend, `ci.yml` and the `install`, `eslint`, `knip`, `audit` and `ci` targets.
 
 ### Stack
 
@@ -19,7 +21,6 @@ add only what is particular to it.
   `pnpm exec shadcn add <name>`: the CLI is a devDependency, so the lockfile pins it like every
   other package (`pnpm add -D shadcn` in an older project).
 - **Tests:** Vitest with Testing Library, next to the code as `*.test.ts(x)`.
-- **Packages:** pnpm, pinned in `mise.toml`. Never add `package-lock.json` or `yarn.lock`.
 - **Hosting** is another profile's job. Nothing in `src/` should know where the app runs:
   it reaches its backend over HTTP, at `/api`. A hosting profile writes `.devtools/host/`,
   and the shared Vite, Vitest, ESLint and make configs take its part from there.

@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import react from '@vitejs/plugin-react'
 import type { TestProjectInlineConfiguration } from 'vitest/config'
 
+import { test } from '../typescript/vitest.ts'
 import { hosting } from './vite.ts'
 
 const setup = './src/test/setup.ts'
@@ -11,8 +12,7 @@ export const base: TestProjectInlineConfiguration = {
   resolve: { tsconfigPaths: true },
   plugins: [react()],
   test: {
-    include: ['src/**/*.test.{ts,tsx}'],
-    restoreMocks: true,
+    ...test,
     environment: 'jsdom',
     globals: true,
     setupFiles: existsSync(setup) ? [setup] : [],

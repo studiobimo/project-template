@@ -148,18 +148,20 @@ manages and what stays per project.
   ```
 
 - **`vite-react-tanstack`**, for a React app built with Vite, file-based TanStack Router,
-  TanStack Query and Tailwind: the shared Vite, Vitest, ESLint and TypeScript configs that the
-  project's own config files extend, Prettier, the Makefile targets, hooks and CI, pnpm pinned
-  in `mise.toml` with a week's release cooldown, a bundle budget, i18next with a lint rule
-  against inline strings, the shadcn MCP server registered for Claude Code (`.mcp.json`) and
-  Codex (`.codex/config.toml`), and the conventions in `AGENTS.md`. It does not choose a host.
+  TanStack Query and Tailwind. It builds on `typescript`, which must be listed above it: that
+  profile keeps the pnpm pin and release cooldown, CI, the strict tsconfig, ESLint and Vitest
+  bases and the shared make targets. This one adds the Vite, Vitest, ESLint and TypeScript configs
+  that the project's own config files extend, Prettier, the Makefile targets, hooks, a bundle
+  budget, i18next with a lint rule against inline strings, the shadcn MCP server registered for
+  Claude Code (`.mcp.json`) and Codex (`.codex/config.toml`), and the conventions in `AGENTS.md`.
+  It does not choose a host.
 
   Its generator, `.devtools/scripts/gen.mjs`, writes everything a new project needs around it
   and installs the packages; after that it writes routes, features, components and hooks:
 
   ```sh
-  echo vite-react-tanstack >> .template-profiles
-  make -C .devtools sync                      # then `include vite.mk` in .devtools/Makefile
+  printf "typescript\nvite-react-tanstack\n" >> .template-profiles
+  make -C .devtools sync                      # then `include vite.mk` in .devtools/Makefile, after base.mk
   make -C .devtools setup
   node .devtools/scripts/gen.mjs app          # config, router and i18n wiring, packages, first build
   node .devtools/scripts/gen.mjs route '/invoices/$invoiceId'
