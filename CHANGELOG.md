@@ -1,5 +1,21 @@
 # Changelog
 
+## [0.16.0](https://github.com/studiobimo/project-template/compare/v0.15.0...v0.16.0) (2026-11-27)
+
+
+### Features
+
+* **devtools:** add a typescript base profile with turborepo and packages/contracts ([#112](https://github.com/studiobimo/project-template/issues/112)) ([4fc76ff](https://github.com/studiobimo/project-template/commit/4fc76ffe610ccce22d2e8fa4fddb60c8a6e78660))
+* **devtools:** add an adk profile for pub/sub-driven google adk agents on cloud run ([#118](https://github.com/studiobimo/project-template/issues/118)) ([3322469](https://github.com/studiobimo/project-template/commit/33224691f40be3e5a18063974eef8ff1bd5ae968))
+* **devtools:** add an opt-in cloudsql profile ([#119](https://github.com/studiobimo/project-template/issues/119)) ([f02fec9](https://github.com/studiobimo/project-template/commit/f02fec9bcc1834f8e741567ea94b21c3d8cb407a))
+* **devtools:** add an opt-in phoenix profile for adk traces and run evals ([#123](https://github.com/studiobimo/project-template/issues/123)) ([87feb50](https://github.com/studiobimo/project-template/commit/87feb50cee8a2840eab821021a10dcc293d33a4f))
+* **devtools:** add the adk contracts, platform and ingress templates ([#117](https://github.com/studiobimo/project-template/issues/117)) ([6032662](https://github.com/studiobimo/project-template/commit/60326624dda10e901be85f9347aa206bafdb7dc0))
+* **devtools:** add the adk profile skeleton with its generator, make targets and Cloud Run infra ([#116](https://github.com/studiobimo/project-template/issues/116)) ([65371ac](https://github.com/studiobimo/project-template/commit/65371ace851b815d8a243bd49eecb71241ee5c62))
+* **devtools:** add the run-completed contract and the eval worker templates ([#122](https://github.com/studiobimo/project-template/issues/122)) ([aebd6bd](https://github.com/studiobimo/project-template/commit/aebd6bdcf392de6587758fecbe18ed8be5a20229))
+* **devtools:** back adk sessions with cloud sql ([#120](https://github.com/studiobimo/project-template/issues/120)) ([cba3694](https://github.com/studiobimo/project-template/commit/cba369482150249799f1622c8dd05aca52612a1d))
+* **devtools:** let a profile manifest require another profile ([#110](https://github.com/studiobimo/project-template/issues/110)) ([81dbdee](https://github.com/studiobimo/project-template/commit/81dbdee6e9886350f205c25bdb701dbac9c7f6c2))
+* **devtools:** split the gcp profile into gcp-infra and its node server part ([#111](https://github.com/studiobimo/project-template/issues/111)) ([addb71f](https://github.com/studiobimo/project-template/commit/addb71ff5895579097ff66a1fe9595434fee2229))
+
 ## [0.15.0](https://github.com/studiobimo/project-template/compare/v0.14.2...v0.15.0) (2026-11-17)
 
 
