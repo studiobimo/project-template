@@ -1,34 +1,3 @@
 # >>> template:typescript
-# Added to the hooks in the base block. A project's own pre-commit jobs go below the closing
-# marker, indented under `jobs:`; a job there with the same name as one here changes it. A
-# profile built on this one (vite-react-tanstack) adds its jobs there too, in its own block.
-#
-# The jobs that run the project's packages skip themselves until `make -C .devtools install`
-# has filled node_modules. That is also why CI's lint job, which installs only the tools in
-# mise.toml, passes over them: ci.yml runs the same checks once it has installed.
-pre-push:
-  jobs:
-    - name: typecheck
-      skip:
-        - run: test ! -d node_modules
-      run: make --no-print-directory -C .devtools typecheck
-
-    - name: vitest
-      skip:
-        - run: test ! -d node_modules
-      run: make --no-print-directory -C .devtools test
-
-pre-commit:
-  # Files pnpm and code generators write.
-  exclude:
-    - 'pnpm-lock.yaml'
-    - '*.gen.ts'
-    - '**/*.gen.ts'
-
-  jobs:
-    - name: eslint
-      glob: '*.{js,mjs,cjs,jsx,ts,tsx,mts}'
-      skip:
-        - run: test ! -d node_modules
-      run: mise exec -- pnpm exec eslint --max-warnings=0 --no-warn-ignored {staged_files}
+# This profile's hooks are in .devtools/lefthook-typescript.yml.
 # <<< template:typescript

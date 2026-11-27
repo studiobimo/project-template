@@ -8,7 +8,7 @@
 
 # >>> template:base
 extends:
-  - .devtools/lefthook-base.yml
+  - .devtools/lefthook-*.yml
 
 # The org's own rules, from the same scripts CI runs on the pull request.
 # agent-guard.sh runs them by job name (branch-name, pr-size).

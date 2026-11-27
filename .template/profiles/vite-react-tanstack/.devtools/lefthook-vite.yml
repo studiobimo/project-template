@@ -1,0 +1,12 @@
+# Managed by studiobimo/project-template (profile vite-react-tanstack); change it there.
+# Loaded by the `extends` glob in lefthook.yml, beside the typescript profile's jobs.
+pre-commit:
+  jobs:
+    # Like the whitespace fixers: it rewrites the files, then fails so the change is seen.
+    - name: prettier
+      glob: '*.{js,mjs,cjs,jsx,ts,tsx,css,html}'
+      skip:
+        - run: test ! -d node_modules
+      run: >-
+        mise exec -- pnpm exec prettier --check --log-level=warn {staged_files}
+        || { mise exec -- pnpm exec prettier --write --log-level=warn {staged_files}; exit 1; }
