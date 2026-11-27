@@ -1,8 +1,9 @@
 # The gcp profile: hosting on Google Cloud Run for an app on the vite-react-tanstack profile.
-# One service serves the built client and answers /api/* with a Hono app on Node, and
-# OpenTofu describes the GCP project around it. Opt in with `gcp` in the project's
-# .template-profiles, after vite-react-tanstack. Same syntax as .template/manifest, but every
-# path is read from .template/profiles/gcp/ rather than from the template's root.
+# One service serves the built client and answers /api/* with a Hono app on Node. Opt in with
+# `gcp` in the project's .template-profiles, after vite-react-tanstack and gcp-infra, which
+# gives it OpenTofu, the project's accounts and Workload Identity, and the make settings its
+# deploy target uses. Same syntax as .template/manifest, but every path is read from
+# .template/profiles/gcp/ rather than from the template's root.
 #
 # Most of what it manages is in .devtools/host/, which the vite-react-tanstack profile's
 # shared configs load when it exists: its Vite plugin and server build, its Vitest project,
@@ -12,9 +13,12 @@
 #
 # Per project, and not listed: everything under server/, in APP_DIR; the Dockerfile,
 # .gcloudignore and everything under infra/, at the root; and the job in release.yml that
-# deploys a release (deploy.yml shows it).
+# deploys a release (deploy.yml shows it). infra/ is written by gcp-infra's generator, with
+# infra/service.tf added here for the Cloud Run services.
 # `node .devtools/scripts/gen.mjs host` writes a first version of them and installs the
 # packages; `gen.mjs app` does the same when the profile is there first.
+
+requires gcp-infra
 
 file  .devtools/host/host.mk
 file  .devtools/host/vite.ts
@@ -24,9 +28,5 @@ file  .devtools/host/eslint.js
 file  .devtools/host/scaffold.mjs
 file  .github/workflows/deploy.yml
 
-block mise.toml               gcp
-block lefthook.yml            gcp
-block .gitignore              gcp
-block .editorconfig           gcp
 block .github/dependabot.yml  gcp
 block AGENTS.md               gcp

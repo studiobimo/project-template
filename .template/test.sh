@@ -290,11 +290,24 @@ in_repo() { (cd "$1" && shift && "$@"); }
 for manifest in "${src}"/.template/manifest.*; do
     name="${manifest##*/manifest.}"
     copy "${work}/profile-${name}"
-    echo "${name}" >"${work}/profile-${name}/.template-profiles"
+    { sed -n 's/^requires[[:space:]]*//p' "${manifest}"; echo "${name}"; } >"${work}/profile-${name}/.template-profiles"
     expect 0 "the ${name} profile syncs into a project" \
         in_repo "${work}/profile-${name}" .devtools/scripts/template-sync.sh --from "${src}" --ref v9.9.9
     expect 0 "and the project is in step with it" \
         in_repo "${work}/profile-${name}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
+done
+
+requirers=(gcp)
+for profile in "${requirers[@]}"; do
+    printf '%s\n' "${profile}" >"${work}/profile-${profile}/.template-profiles"
+    expect 1 "a project listing ${profile} without gcp-infra has drift, not an error" \
+        in_repo "${work}/profile-${profile}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
+    expect 0 "sync adds gcp-infra above ${profile}" \
+        in_repo "${work}/profile-${profile}" .devtools/scripts/template-sync.sh --from "${src}" --ref v9.9.9
+    expect 0 "so ${profile} follows gcp-infra in the list" \
+        test "$(cat "${work}/profile-${profile}/.template-profiles")" = "$(printf 'gcp-infra\n%s' "${profile}")"
+    expect 0 "and the project is in step" \
+        in_repo "${work}/profile-${profile}" .devtools/scripts/template-sync.sh --check --from "${src}" --ref v9.9.9
 done
 
 echo "vite-react-tanstack generator"
@@ -374,6 +387,7 @@ expect 2 "and only that branch" image WORKERS_CI_BRANCH=feat/thing deploy-branch
 git -C "${vite}" checkout --quiet main
 rm -r "${vite}/.devtools/host" "${vite}/.devtools/production.mk"
 cp -R "${work}/profile-gcp/.devtools/host" "${vite}/.devtools/"
+cp -R "${work}/profile-gcp-infra/.devtools/gcp-infra" "${vite}/.devtools/"
 expect 0 "writes another hosting profile's files" gen host --no-install
 expect 0 "naming the Cloud Run service after the project" \
     grep -qF '"service": "profile-vite-react-tanstack"' "${vite}/infra/project.auto.tfvars.json"
@@ -383,6 +397,26 @@ expect 0 "with a service for each environment DEPLOY_ENVS lists" \
     grep -qF 'environments = toset(["production"])' "${vite}/infra/main.tf"
 expect 0 "and only those let in to deploy" \
     grep -qF "assertion.environment in ['production']" "${vite}/infra/deploy.tf"
+expect 0 "with the services in a file of the hosting profile's" \
+    grep -qF 'resource "google_cloud_run_v2_service" "app"' "${vite}/infra/service.tf"
+expect 1 "and none in the shared infra" grep -rqF google_cloud_run_v2_service "${vite}/infra/main.tf" "${vite}/infra/deploy.tf"
+
+echo "gcp-infra"
+infra="${work}/profile-gcp-infra"
+infra_make() { make -s -C "${infra}/.devtools" "$@"; }
+expect 0 "a project with no other profile includes its make targets" infra_make -n infra-plan
+expect 0 "and checks the formatting of infra/ in ci" infra_make -n infra-fmt-check
+expect 2 "which a project without it does not have" make -s -C "${work}/profile-java-gradle/.devtools" -n infra-plan
+expect 0 "writes a first infra/ without the vite profile" \
+    in_repo "${infra}" mise exec -- node .devtools/gcp-infra/gen.mjs
+expect 0 "naming the GCP project after the repository" \
+    grep -qF '"project": "profile-gcp-infra"' "${infra}/infra/project.auto.tfvars.json"
+expect 0 "with Workload Identity for the deploy workflow" \
+    grep -qF 'google_iam_workload_identity_pool_provider' "${infra}/infra/deploy.tf"
+expect 0 "the Vertex AI and Telemetry APIs" grep -qF 'telemetry.googleapis.com' "${infra}/infra/main.tf"
+expect 1 "and no Cloud Run service" grep -rqF google_cloud_run_v2_service "${infra}/infra"
+expect 1 "and no members, which belong to the hosting profile" grep -qF members "${infra}/infra/project.auto.tfvars.json"
+expect 1 "refuses to overwrite it" in_repo "${infra}" mise exec -- node .devtools/gcp-infra/gen.mjs
 
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }
@@ -629,7 +663,7 @@ expect 1 "a project without the profile gets no .mcp.json" test -e "${work}/prof
 expect 1 "and no MCP server in its Codex config" grep -q 'mcp_servers' "${work}/profile-cloudflare/.codex/config.toml"
 
 run="${work}/run-shop"
-generated "${run}" gcp
+generated "${run}" $'gcp-infra\ngcp'
 printf 'APP_DIR := apps/web\n' >>"${run}/.devtools/Makefile"
 cp "${work}/workspace" "${run}/pnpm-workspace.yaml"
 expect 0 "writes the Cloud Run server into APP_DIR" gen_in "${run}" app --no-install
@@ -643,7 +677,7 @@ expect 0 "and that build let back in, parent by parent" \
     grep -qx '!/apps/web/dist/' "${run}/.gcloudignore"
 expect 0 "from the first of them" grep -qx '/apps/\*' "${run}/.gcloudignore"
 flat_run="${work}/flat-run"
-generated "${flat_run}" gcp
+generated "${flat_run}" $'gcp-infra\ngcp'
 printf '# Flat Run\n\n[![Lint](https://example.com/b.svg)](https://example.com)\n' >"${flat_run}/README.md"
 expect 0 "and without APP_DIR the server stays at the root" gen_in "${flat_run}" app --no-install
 expect 0 "with the image as it was" grep -qx 'COPY dist ./dist' "${flat_run}/Dockerfile"

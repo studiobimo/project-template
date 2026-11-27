@@ -1,0 +1,31 @@
+# The gcp-infra profile: the Google Cloud project every Cloud Run service shares, described in
+# OpenTofu. Opt in with `gcp-infra` in the project's .template-profiles; it needs no other
+# profile. Same syntax as .template/manifest, but every path is read from
+# .template/profiles/gcp-infra/ rather than from the template's root.
+#
+# It manages the make targets (.devtools/gcp-infra.mk, which base.mk includes), the generator
+# in .devtools/gcp-infra/ and the OpenTofu pin and hook. The `gcp` profile builds on it.
+# What it makes in infra/: the state bucket's backend, the project's APIs (Cloud Run, Artifact
+# Registry, Secret Manager, Pub/Sub, Vertex AI and Telemetry, Cloud Trace, Monitoring and
+# Logging), the Artifact Registry repository, a runtime account per environment that can write
+# traces and metrics, the budget, and Workload Identity Federation with the deployer and the
+# builder accounts that deploy.yml signs in as.
+#
+# Per project, and not listed: everything under infra/, and the workflow that deploys.
+# `make -C .devtools infra-gen` writes a first infra/, which reads DEPLOY_ENVS from
+# .devtools/Makefile like the gcp profile does; with the gcp profile, `gen.mjs host` writes it.
+#
+# The mise.toml, lefthook.yml, .gitignore and .editorconfig blocks are named gcp, as they were
+# when the gcp profile held them, so a project that has them is updated in place. The
+# lefthook.yml block is a list of pre-commit jobs: it goes under the vite profile's block, or
+# under a `pre-commit:` `jobs:` of the project's own.
+
+file  .devtools/gcp-infra.mk
+file  .devtools/gcp-infra/scaffold.mjs
+file  .devtools/gcp-infra/gen.mjs
+
+block mise.toml       gcp
+block lefthook.yml    gcp
+block .gitignore      gcp
+block .editorconfig   gcp
+block AGENTS.md       gcp-infra
