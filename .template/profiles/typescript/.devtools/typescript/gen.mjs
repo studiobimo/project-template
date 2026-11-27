@@ -1,17 +1,15 @@
 #!/usr/bin/env node
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, writeFileSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 import { kebab } from '../scripts/slug.mjs'
-import { die, printNext, run as runIn, writeNew } from './scaffold.mjs'
+import { die, inRoot, printNext } from './scaffold.mjs'
 import { GEN, MESSAGES } from './strings.mjs'
 
 const say = MESSAGES.gen
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
-const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
-const run = (command, args) => runIn(command, args, root)
-const emit = (files) => writeNew(root, files)
+const { read, run, emit } = inRoot(root)
 
 const slug = kebab(basename(root))
 const scope = `@${slug}`
@@ -211,7 +209,16 @@ function ensureWorkspacePackages() {
   writeFileSync(file, packages + current)
 }
 
+const libraryManifest = {
+  exports: { '.': { types: './dist/index.d.ts', default: './dist/index.js' } }
+}
+
 const kinds = {
+  package(name) {
+    if (!name || !/^[a-z][a-z0-9-]*$/.test(name)) die(say.usagePackage)
+    emit(inDir(join('packages', name), packageFiles(`${scope}/${name}`, libraryManifest)))
+    printNext(MESSAGES.next.check, MESSAGES.next.commit)
+  },
   workspace() {
     emit({ ...rootFiles, ...contractsFiles })
     ensureWorkspacePackages()

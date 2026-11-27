@@ -1,0 +1,5 @@
+# >>> template:adk
+# The generator's templates are indented as the files they become: two spaces.
+[*.tpl]
+indent_size = 2
+# <<< template:adk

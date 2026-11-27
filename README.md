@@ -230,6 +230,23 @@ manages and what stays per project.
   A project that had `gcp` before `gcp-infra` existed lists `gcp-infra` above it and syncs: the
   blocks it moves keep their names, so they are updated in place.
 
+- **`adk`**, deterministic-first Google ADK agents in TypeScript, driven by Pub/Sub on Cloud Run:
+  code does the work and small models only judge. It needs `gcp-infra` and `typescript`, listed
+  before it. The generator writes an ingress (GitHub and Slack signature checks, a fast ack,
+  publish with an ordering key per pull request), a worker (a push subscription into an ADK
+  graph workflow with a code step and a judge step, Gemini or Claude on Vertex AI), the topics,
+  subscriptions, dead-letter queue and Cloud Run services with an OpenTelemetry Collector
+  sidecar in `infra/`, one trace id from the webhook to the last step, evals, and each
+  workflow's graph as JSON:
+
+  ```sh
+  printf 'gcp-infra\ntypescript\nadk\n' >> .template-profiles
+  make -C .devtools sync                      # then `include typescript.mk` and `include adk.mk`
+  node .devtools/typescript/gen.mjs workspace
+  make -C .devtools adk-gen                   # contracts, platform, ingress, worker, local, infra
+  make -C .devtools adk-dev                   # all in one process, no GCP needed
+  ```
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared

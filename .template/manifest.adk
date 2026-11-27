@@ -1,0 +1,40 @@
+# The adk profile: deterministic-first Google ADK agents (TypeScript), driven by Pub/Sub on Cloud
+# Run. Code does the work and small models only judge. Opt in with `adk` in the project's
+# .template-profiles, after gcp-infra and typescript, which it needs. Same syntax as
+# .template/manifest, but every path is read from .template/profiles/adk/ rather than from the
+# template's root.
+#
+# It manages the make targets (.devtools/adk.mk) and the generator in .devtools/adk/, whose
+# templates/ hold the first version of everything below. `make -C .devtools adk-gen` copies them
+# into the project once, after `node .devtools/typescript/gen.mjs workspace`, and from then on
+# the copies are the project's:
+#
+#   packages/contracts   the pr-events topic, the push envelope, webhook payloads (zod)
+#   packages/platform    OpenTelemetry setup, traceparent in Pub/Sub attributes, the publisher
+#                        and an in-process bus with the same interface
+#   packages/local       ingress -> bus -> worker in one process, and the test that checks one
+#                        trace id from the webhook to the last workflow step
+#   services/ingress     GitHub and Slack signature checks, a fast ack, publish with an
+#                        ordering key per pull request
+#   services/worker      Pub/Sub push to an ADK graph workflow: a code step and a judge step,
+#                        Gemini or Claude through Vertex AI, evals, the graph as JSON
+#   infra/               topics, subscriptions (push, ordering, dead letter), secrets and the
+#                        Cloud Run services with an OpenTelemetry Collector sidecar, next to
+#                        what gcp-infra writes
+#
+# Adding the profile to a project: `include adk.mk` from .devtools/Makefile, after
+# typescript.mk. If the project already has the blocks below, wrap them in the markers first.
+
+requires gcp-infra
+requires typescript
+
+file  .devtools/adk.mk
+file  .devtools/adk/gen.mjs
+file  .devtools/adk/strings.mjs
+file  .devtools/adk/templates/infra/collector.yaml.tpl
+file  .devtools/adk/templates/infra/pubsub.tf.tpl
+file  .devtools/adk/templates/infra/secrets.tf.tpl
+file  .devtools/adk/templates/infra/service.tf.tpl
+
+block .editorconfig  adk
+block AGENTS.md  adk

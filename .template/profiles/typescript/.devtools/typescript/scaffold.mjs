@@ -1,5 +1,5 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 
 import { GLYPH, SCAFFOLD } from './strings.mjs'
@@ -27,3 +27,24 @@ export function run(command, args, cwd) {
 }
 
 export const printNext = (...lines) => console.log(SCAFFOLD.next(lines))
+
+export const missingAnchor = (text, edits) => edits.find(({ from }) => !text.includes(from))?.from
+
+export function inRoot(root) {
+  const read = (path) => (existsSync(join(root, path)) ? readFileSync(join(root, path), 'utf8') : '')
+  return {
+    read,
+    run: (command, args) => run(command, args, root),
+    emit: (files) => writeNew(root, files),
+    patch(path, edits) {
+      const text = read(path)
+      const anchor = missingAnchor(text, edits)
+      if (anchor !== undefined) die(SCAFFOLD.anchorMissing(path, anchor))
+      writeFileSync(
+        join(root, path),
+        edits.reduce((current, { from, to }) => current.replace(from, () => to), text)
+      )
+      console.log(SCAFFOLD.patched(path))
+    }
+  }
+}

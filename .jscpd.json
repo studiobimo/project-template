@@ -2,6 +2,7 @@
   "ignore": [
     "**/*lock.json",
     "**/*lock.yaml",
+    "**/package.json",
     "**/*.lock",
     "**/.mise/locks/**",
     "**/src/routeTree.gen.ts",
