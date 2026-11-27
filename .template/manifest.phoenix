@@ -1,0 +1,39 @@
+# The phoenix profile: Arize Phoenix on Cloud Run for the adk profile's traces, with an eval
+# worker that scores each run and posts the score to Phoenix. Phoenix is licensed under the
+# Elastic License 2.0: use it internally, do not offer it as a service. Opt in with `phoenix` in
+# the project's .template-profiles, after gcp-infra, typescript, cloudsql and adk, which it
+# needs. Same syntax as .template/manifest, but every path is read from
+# .template/profiles/phoenix/ rather than from the template's root.
+#
+# It manages the make target (.devtools/phoenix.mk) and the generator in .devtools/phoenix/.
+# `make -C .devtools phoenix-gen` writes infra/phoenix.tf, services/eval and the run.completed
+# topic's contract once, patches the adk worker, infra/service.tf and the collector config,
+# and from then on those are the project's.
+#
+# Adding the profile to a project: `include phoenix.mk` from .devtools/Makefile, after adk.mk.
+
+requires gcp-infra
+requires typescript
+requires cloudsql
+requires adk
+
+file  .devtools/phoenix.mk
+file  .devtools/phoenix/gen.mjs
+file  .devtools/phoenix/strings.mjs
+file  .devtools/phoenix/patches/collector-exporter.yaml.tpl
+file  .devtools/phoenix/patches/collector-pipelines.yaml.tpl
+file  .devtools/phoenix/patches/collector-processors.yaml.tpl
+file  .devtools/phoenix/patches/collector-tests.ts.tpl
+file  .devtools/phoenix/patches/service-collector-env.tf.tpl
+file  .devtools/phoenix/patches/service-eval-env.tf.tpl
+file  .devtools/phoenix/templates/infra/phoenix.tf.tpl
+file  .devtools/phoenix/templates/packages/contracts/src/run-completed.ts.tpl
+file  .devtools/phoenix/templates/services/eval/src/app.ts.tpl
+file  .devtools/phoenix/templates/services/eval/src/eval.test.ts.tpl
+file  .devtools/phoenix/templates/services/eval/src/index.ts.tpl
+file  .devtools/phoenix/templates/services/eval/src/judge.ts.tpl
+file  .devtools/phoenix/templates/services/eval/src/phoenix.ts.tpl
+file  .devtools/phoenix/templates/services/eval/src/strings.ts.tpl
+file  .devtools/phoenix/templates/services/worker/src/run-completed.ts.tpl
+
+block AGENTS.md  phoenix

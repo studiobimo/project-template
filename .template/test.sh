@@ -451,6 +451,27 @@ expect 0 "and none carries a comment" \
 expect 0 "the adk worker keeps its sessions in memory until it does" \
     grep -qF 'new InMemorySessionService()' "${src}/.template/profiles/adk/.devtools/adk/templates/services/worker/src/sessions.ts.tpl"
 
+echo "phoenix"
+observed="${work}/profile-phoenix"
+phoenix_listed_after_what_it_requires() {
+    [[ "$(<"${observed}/.template-profiles")" == $'gcp-infra\ntypescript\ncloudsql\nadk\nphoenix' ]]
+}
+phoenix_files="${src}/.template/profiles/phoenix/.devtools/phoenix"
+expect 0 "the phoenix profile is listed after gcp-infra, typescript, cloudsql and adk" phoenix_listed_after_what_it_requires
+expect 1 "its generator needs the cloudsql and adk files first" \
+    in_repo "${observed}" mise exec -- node .devtools/phoenix/gen.mjs
+expect 0 "every template and patch file the generator reads is in the manifest" \
+    test "$(find "${phoenix_files}/templates" "${phoenix_files}/patches" -type f | wc -l | tr -d ' ')" \
+        = "$(grep -c '^file  \.devtools/phoenix/\(templates\|patches\)/' "${src}/.template/manifest.phoenix")"
+expect 0 "and no template carries a comment" \
+    test -z "$(grep -rlE '^\s*(//|/\*)' "${phoenix_files}/templates" --include='*.ts.tpl')"
+expect 0 "the collector strips prompt content before Cloud Trace" \
+    grep -qF 'transform/attributes, batch]' "${phoenix_files}/patches/collector-pipelines.yaml.tpl"
+expect 0 "and keeps Phoenix on a pipeline without it" \
+    grep -qF 'processors: [memory_limiter, resource/phoenix, batch]' "${phoenix_files}/patches/collector-pipelines.yaml.tpl"
+expect 0 "Phoenix is pinned by version and digest" \
+    grep -qE 'docker\.io/arizephoenix/phoenix:[0-9.]+@sha256:[0-9a-f]{64}' "${phoenix_files}/templates/infra/phoenix.tf.tpl"
+
 echo "vite-react-tanstack bundle budget"
 budget() { (cd "${vite}" && mise exec -- node .devtools/scripts/bundle-budget.mjs "$@"); }
 expect 1 "fails before anything is built" budget --dir nothing-here
