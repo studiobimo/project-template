@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, join, relative } from 'node:path'
 
 import { GLYPH, SCAFFOLD } from './strings.mjs'
 
@@ -28,6 +28,20 @@ export function run(command, args, cwd) {
 
 export const printNext = (...lines) => console.log(SCAFFOLD.next(lines))
 
+const filesUnder = (directory) =>
+  readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {
+    const path = join(directory, entry.name)
+    return entry.isDirectory() ? filesUnder(path) : [path]
+  })
+
+export const templateFiles = (directory, suffix, transform = (text) => text) =>
+  Object.fromEntries(
+    filesUnder(directory).map((path) => [
+      relative(directory, path).slice(0, -suffix.length),
+      transform(readFileSync(path, 'utf8'))
+    ])
+  )
+
 export const missingAnchor = (text, edits) => edits.find(({ from }) => !text.includes(from))?.from
 
 export function inRoot(root) {
@@ -36,6 +50,9 @@ export function inRoot(root) {
     read,
     run: (command, args) => run(command, args, root),
     emit: (files) => writeNew(root, files),
+    add: (directory, dependencies, flags = []) =>
+      dependencies.length > 0 &&
+      run('pnpm', ['--filter', `./${directory}`, 'add', ...flags, ...dependencies], root),
     patch(path, edits) {
       const text = read(path)
       const anchor = missingAnchor(text, edits)
