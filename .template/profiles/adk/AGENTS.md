@@ -23,6 +23,9 @@ half of `infra/`; from then on they are the project's.
 - **Graphs are data.** `make -C .devtools adk-graphs` writes `graphs/<workflow>.json` (React Flow
   nodes and edges); `make ci` fails when they are stale. Register a workflow in
   `services/worker/src/workflows.ts` to have it exported.
+- **Sessions** come from `sessionService()` in `services/worker/src/sessions.ts`: in memory
+  until the `cloudsql` profile moves them to Postgres (`cloudsql-adk-gen`), which a workflow
+  that pauses needs. Each run's session is named after the delivery.
 
 ### Messages
 

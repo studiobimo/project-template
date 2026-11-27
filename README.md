@@ -258,6 +258,9 @@ manages and what stays per project.
   make -C .devtools infra-gen cloudsql-gen    # infra/ then infra/cloudsql.tf; then infra-apply
   ```
 
+  With `adk` listed too, `make -C .devtools cloudsql-adk-gen` moves the worker's ADK sessions
+  into this database and wires its environment in `infra/`.
+
 ## Tool versions
 
 Every tool the hooks and CI run is pinned in `mise.toml`, with checksums in `mise.lock`. The shared

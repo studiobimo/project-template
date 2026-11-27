@@ -1,10 +1,12 @@
 import {
   FunctionNode,
-  InMemoryRunner,
+  InMemorySessionService,
   LlmAgent,
+  Runner,
   START,
   Workflow,
-  type BaseLlm
+  type BaseLlm,
+  type BaseSessionService
 } from '@google/adk'
 import {
   prEventSchema,
@@ -51,16 +53,26 @@ export function buildTriage(judge: Judge): Workflow {
   })
 }
 
-export async function runTriage(workflow: Workflow, event: PrEvent): Promise<TriageVerdict> {
+export async function runTriage(
+  workflow: Workflow,
+  event: PrEvent,
+  sessionService: BaseSessionService = new InMemorySessionService()
+): Promise<TriageVerdict> {
   return inSpan(WORKER.spans.workflow(workflow.name), async (span) => {
     span.setAttributes({
       [WORKER.attributes.repository]: event.repository,
       [WORKER.attributes.pullRequest]: event.pullRequest
     })
-    const runner = new InMemoryRunner({ agent: workflow, appName: WORKER.app })
+    const runner = new Runner({
+      agent: workflow,
+      appName: WORKER.app,
+      sessionService,
+      autoCreateSession: true
+    })
     let output: unknown
-    for await (const step of runner.runEphemeral({
+    for await (const step of runner.runAsync({
       userId: WORKER.user,
+      sessionId: event.deliveryId,
       newMessage: { role: 'user', parts: [{ text: JSON.stringify(event) }] }
     })) {
       if (step.author === WORKER.workflows.judge && step.output !== undefined) output = step.output

@@ -29,6 +29,16 @@ where there is none, then `infra-apply`.
 - **Connect** with `@google-cloud/cloud-sql-connector` and `pg`: the connector's
   `getOptions({ instanceConnectionName, ipType: 'PUBLIC' })` goes into the `pg` `Pool` with
   `user`, `password` and `database`. Add the packages in the project that connects.
+- **With the `adk` profile**, `make -C .devtools cloudsql-adk-gen` (after `adk-gen` and
+  `cloudsql-gen`) keeps the worker's ADK sessions in this database, so a workflow that pauses
+  resumes in any instance. ADK's own `DatabaseSessionService` stores them: it creates its
+  tables itself, idempotently. `services/worker/src/sessions.ts` picks it when
+  `INSTANCE_CONNECTION_NAME` is set (through the connector), or `DB_HOST` for a local Postgres,
+  and ADK's in-memory service otherwise. A run's session is named after the delivery, so a
+  redelivery resumes it. `infra/service.tf` gets the variables above on the worker, the
+  password from its secret, by secret and version, so the first apply waits for both and for
+  the accessor binding; `DB_POOL_SIZE` (default 5) sizes the pool. Tests run the real
+  service against an in-process Postgres (PGlite) over the wire protocol.
 - **Why the HCL has no comments.** The instance has a public IP but no authorized network, so
   only the Cloud SQL connector, which checks IAM and encrypts, gets in.
 <!-- <<< template:cloudsql -->

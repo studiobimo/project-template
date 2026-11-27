@@ -13,6 +13,10 @@ locals {
     "${pair[1]}-${pair[0]}" => { environment = pair[0], service = pair[1] }
   }
   collector_image = "us-docker.pkg.dev/cloud-ops-agents-artifacts/google-cloud-opentelemetry-collector/otelcol-google:0.128.0"
+
+  adk_worker_env = {}
+
+  adk_worker_secret_env = {}
 }
 
 resource "google_project_iam_member" "runtime_vertex" {
@@ -95,6 +99,27 @@ resource "google_cloud_run_v2_service" "adk" {
       env {
         name  = "PUBSUB_TOPIC_SUFFIX"
         value = "-${each.value.environment}"
+      }
+
+      dynamic "env" {
+        for_each = each.value.service == "worker" ? lookup(local.adk_worker_env, each.value.environment, {}) : {}
+        content {
+          name  = env.key
+          value = env.value
+        }
+      }
+
+      dynamic "env" {
+        for_each = each.value.service == "worker" ? lookup(local.adk_worker_secret_env, each.value.environment, {}) : {}
+        content {
+          name = env.key
+          value_source {
+            secret_key_ref {
+              secret  = env.value.secret
+              version = env.value.version
+            }
+          }
+        }
       }
 
       dynamic "env" {

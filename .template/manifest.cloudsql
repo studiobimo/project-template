@@ -12,5 +12,9 @@ requires gcp-infra
 file  .devtools/cloudsql.mk
 file  .devtools/cloudsql/scaffold.mjs
 file  .devtools/cloudsql/gen.mjs
+file  .devtools/cloudsql/adk.mjs
+file  .devtools/cloudsql/adk-strings.mjs
+file  .devtools/cloudsql/templates/sessions.ts.tpl
+file  .devtools/cloudsql/templates/sessions.test.ts.tpl
 
 block AGENTS.md  cloudsql
